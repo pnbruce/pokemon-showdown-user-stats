@@ -1,6 +1,5 @@
 use lambda_http::{Body, Error, Request, Response};
-use std::collections::HashMap;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 fn to_id<T: AsRef<str>>(text: T) -> String {
     // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
@@ -11,11 +10,11 @@ fn to_id<T: AsRef<str>>(text: T) -> String {
         .collect()
 }
 
-fn extract_body(event: Request) -> Text {
+fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
     match event.body() {
-        Body::Text(text) => text.clone(),
-        Body::Binary(_) => return Err("Binary body not supported".into()),
-        Body::Empty => return Err("Request body is empty".into()),
+        Body::Text(text) => return Result::Ok(text.clone()),
+        Body::Binary(_) => return Result::Err("Request body is binary".into()),
+        Body::Empty => return Result::Err("Request body is empty"),
     };
 }
 
@@ -26,8 +25,10 @@ fn extract_body(event: Request) -> Text {
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     
     // Extract request details
-    let body = extract_body(Request);
-
+    let body = extract_body(event)
+    .map_err(|_|"Failed to extract body from request")
+    .unwrap();
+    
     // Parse the body as JSON
     let parsed_json: Value = serde_json::from_str(&body)
         .map_err(|_| "Failed to parse body as JSON")?;
@@ -66,7 +67,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(id.into())
+        .body(format!("username: {username}, id: {id}").into())
         .map_err(Box::new)?;
     Ok(resp)
 }
