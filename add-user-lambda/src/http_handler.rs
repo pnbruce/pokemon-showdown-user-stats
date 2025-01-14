@@ -24,6 +24,7 @@ fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     
+    
     // Extract request details
     let body = extract_body(event)
     .map_err(|_|"Failed to extract body from request")
