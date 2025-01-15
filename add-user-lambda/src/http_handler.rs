@@ -18,6 +18,8 @@ fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
     };
 }
 
+fn stringify(x: &str) -> String { format!("Failed to extract body: {x}") }
+
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
@@ -27,12 +29,12 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     
     // Extract request details
     let body = extract_body(event)
-    .map_err(|_|"Failed to extract body from request")
+    .map_err(stringify)
     .unwrap();
     
     // Parse the body as JSON
     let parsed_json: Value = serde_json::from_str(&body)
-        .map_err(|_| "Failed to parse body as JSON")?;
+        .map_err(|_| format!("Failed to parse body as JSON: {}", body))?;
 
     // Validate the "id" key exists
     if let Some(username) = parsed_json.get("username") {
