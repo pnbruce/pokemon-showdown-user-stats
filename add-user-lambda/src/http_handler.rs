@@ -1,5 +1,7 @@
-use lambda_http::{Body, Error, Request, Response};
+use aws_config::BehaviorVersion;
+use lambda_http::{Body, Request, Response};
 use serde_json::Value;
+use std::env;
 
 fn to_id<T: AsRef<str>>(text: T) -> String {
     // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
@@ -18,23 +20,20 @@ fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
     };
 }
 
-fn stringify(x: &str) -> String { format!("Failed to extract body: {x}") }
+fn stringify(x: &str) -> String {
+    format!("Failed to extract body: {x}")
+}
 
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
-pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    
-    
+pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, lambda_http::Error> {
     // Extract request details
-    let body = extract_body(event)
-    .map_err(stringify)
-    .unwrap();
-    
+    let body = extract_body(event).map_err(stringify)?;
+
     // Parse the body as JSON
-    let parsed_json: Value = serde_json::from_str(&body)
-        .map_err(|_| format!("Failed to parse body as JSON: {}", body))?;
+    let parsed_json: Value = serde_json::from_str(&body).expect("Failed to parse JSON body");
 
     // Validate the "id" key exists
     if let Some(username) = parsed_json.get("username") {
@@ -46,16 +45,37 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     }
 
     // Validate username
-    let username = parsed_json["username"].as_str().unwrap();
+    let username = parsed_json["username"]
+        .as_str()
+        .expect("Failed to parse JSON body");
     let id = to_id(username);
 
+    let user_stats_bucket = env::var("USER_STATS_BUCKET").expect("Failed to parse JSON body");
+
     // check if S3 contains an entry for this username
+    let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+    let s3 = aws_sdk_s3::Client::new(&config);
 
-    // handle error response form S3 by responsing with internal error
-
-    // if S3 contains an entry for this username, return "user stats already tracked error"
-
+    match s3
+        .head_object()
+        .bucket(user_stats_bucket)
+        .key(id.clone() + ".json")
+        .send()
+        .await
+    {
+        Ok(_) => {
+            let resp = Response::builder()
+                .status(404)
+                .header("content-type", "text/html")
+                .body(format!("username: {username}, id: {id} has already been added").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+        Err(_) => {}
+    }
     // check if is on PS
+
+    
 
     // handle error response from SP, return "Invalid Pokemon Showdown response error"
 
@@ -63,9 +83,9 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
 
     // convert SP response into format stored in S3 for tracking stats
 
-    // compress json. 
+    // compress json.
 
-    // write compressioned json to the S3 bucket with the 
+    // write compressioned json to the S3 bucket with the
 
     let resp = Response::builder()
         .status(200)
@@ -75,13 +95,11 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     Ok(resp)
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use lambda_http::{Request, RequestExt};
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_generic_http_handler() {
@@ -104,8 +122,7 @@ mod tests {
         let mut query_string_parameters: HashMap<String, String> = HashMap::new();
         query_string_parameters.insert("name".into(), "add-user-lambda".into());
 
-        let request = Request::default()
-            .with_query_string_parameters(query_string_parameters);
+        let request = Request::default().with_query_string_parameters(query_string_parameters);
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 200);
