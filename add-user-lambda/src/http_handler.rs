@@ -65,7 +65,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     {
         Ok(_) => {
             let resp = Response::builder()
-                .status(404)
+                .status(400)
                 .header("content-type", "text/html")
                 .body(format!("username: {username}, id: {id} has already been added").into())
                 .map_err(Box::new)?;
@@ -73,9 +73,12 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
         Err(_) => {}
     }
-    // check if is on PS
 
-    
+    // check if is on PS
+    let body = reqwest::get(format!("https://pokemonshowdown.com/users/{id}.json"))
+        .await?
+        .text()
+        .await?;
 
     // handle error response from SP, return "Invalid Pokemon Showdown response error"
 
@@ -90,7 +93,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(format!("username: {username}, id: {id}").into())
+        .body(format!("username: {username}, id: {id}, ps resp: {body}").into())
         .map_err(Box::new)?;
     Ok(resp)
 }
@@ -114,25 +117,6 @@ mod tests {
         assert_eq!(
             body_string,
             "Hello world, this is an AWS Lambda HTTP request"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_http_handler_with_query_string() {
-        let mut query_string_parameters: HashMap<String, String> = HashMap::new();
-        query_string_parameters.insert("name".into(), "add-user-lambda".into());
-
-        let request = Request::default().with_query_string_parameters(query_string_parameters);
-
-        let response = function_handler(request).await.unwrap();
-        assert_eq!(response.status(), 200);
-
-        let body_bytes = response.body().to_vec();
-        let body_string = String::from_utf8(body_bytes).unwrap();
-
-        assert_eq!(
-            body_string,
-            "Hello add-user-lambda, this is an AWS Lambda HTTP request"
         );
     }
 }
