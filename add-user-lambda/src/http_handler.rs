@@ -3,6 +3,25 @@ use lambda_http::{Body, Request, Response};
 use serde_json::Value;
 use std::env;
 
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+struct Rating {
+    time: u32,
+    elo: u32,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+struct Format {
+    name: String,
+    ratings: Vec<Rating>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+struct User {
+    username: String,
+    userid: u32,
+    formats: Vec<Format>,
+}
+
 fn to_id<T: AsRef<str>>(text: T) -> String {
     // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
     text.as_ref()
@@ -75,16 +94,55 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     }
 
     // check if is on PS
-    let body = reqwest::get(format!("https://pokemonshowdown.com/users/{id}.json"))
-        .await?
-        .text()
-        .await?;
-
-    // handle error response from SP, return "Invalid Pokemon Showdown response error"
-
-    // if user is not on PS then return "user does not exist on SP error"
-
+    let response = match reqwest::get(format!("https://pokemonshowdown.com/users/{id}.json")).await
+    {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("username: {username}, id: {id} does not exist on PS").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+    let body = match response.text().await {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error parsing pokemonshowdown response").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
     // convert SP response into format stored in S3 for tracking stats
+
+    let user_stats: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error parsing pokemonshowdown response").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+    
+    if let Value::Object(map) = user_stats["ratings"].clone() {
+        for (key, value) in map {
+            let resp = Response::builder()
+                .status(200)
+                .header("content-type", "text/html")
+                .body(format!("Key: {}, Value: {}", key, value).into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    } else {
+        println!("The JSON is not an object!");
+    }
 
     // compress json.
 
@@ -93,7 +151,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(format!("username: {username}, id: {id}, ps resp: {body}").into())
+        .body(format!("username: {username}, id: {id}").into())
         .map_err(Box::new)?;
     Ok(resp)
 }
