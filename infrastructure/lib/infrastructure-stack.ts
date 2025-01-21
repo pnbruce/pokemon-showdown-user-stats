@@ -5,6 +5,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 
 export class InfrastructureStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -45,9 +47,24 @@ export class InfrastructureStack extends cdk.Stack {
       throttle: addUserThrottleSettings,
     });
 
+    const updateStatsLambda = new lambda.Function(this, "UpdateStats", {
+      runtime: lambda.Runtime.PROVIDED_AL2023,
+      handler: "does.not.matter",
+      code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
+          "update-stats-lambda/target/lambda/update-stats-lambda")),
+    });
+
+    const updateStatsEventRule = new events.Rule(this, 'EveryMinuteRule', {
+      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
+    });
+
+    updateStatsEventRule.addTarget(new targets.LambdaFunction(updateStatsLambda));
+
     const bucket = new s3.Bucket(this, "UserStats");
     bucket.grantReadWrite(addUserLambda);
+    bucket.grantReadWrite(updateStatsLambda);
     addUserLambda.addEnvironment('USER_STATS_BUCKET', bucket.bucketName);
+    updateStatsLambda.addEnvironment('USER_STATS_BUCKET', bucket.bucketName);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: addUserApi.apiEndpoint,

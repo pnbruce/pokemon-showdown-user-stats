@@ -1,12 +1,16 @@
 use aws_config::BehaviorVersion;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use lambda_http::{Body, Request, Response};
 use serde_json::Value;
 use std::env;
+use std::io::Write;
+use std::time::SystemTime;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct Rating {
-    time: u32,
-    elo: u32,
+    time: u64,
+    elo: f64,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -18,8 +22,15 @@ struct Format {
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct User {
     username: String,
-    userid: u32,
+    userid: String,
     formats: Vec<Format>,
+}
+
+fn get_current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Time error")
+        .as_secs()
 }
 
 fn to_id<T: AsRef<str>>(text: T) -> String {
@@ -39,17 +50,23 @@ fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
     };
 }
 
-fn stringify(x: &str) -> String {
-    format!("Failed to extract body: {x}")
-}
-
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, lambda_http::Error> {
     // Extract request details
-    let body = extract_body(event).map_err(stringify)?;
+    let body = match extract_body(event) {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body("Failed to extract body from user request".into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
 
     // Parse the body as JSON
     let parsed_json: Value = serde_json::from_str(&body).expect("Failed to parse JSON body");
@@ -57,10 +74,20 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     // Validate the "id" key exists
     if let Some(username) = parsed_json.get("username") {
         if !username.is_string() {
-            return Err("Key 'username' is not a string".into());
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body("Key 'username' is not a string".into())
+                .map_err(Box::new)?;
+            return Ok(resp);
         }
     } else {
-        return Err("Key 'username' is missing".into());
+        let resp = Response::builder()
+            .status(400)
+            .header("content-type", "text/html")
+            .body("Key 'username' is missing".into())
+            .map_err(Box::new)?;
+        return Ok(resp);
     }
 
     // Validate username
@@ -77,8 +104,8 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
 
     match s3
         .head_object()
-        .bucket(user_stats_bucket)
-        .key(id.clone() + ".json")
+        .bucket(user_stats_bucket.clone())
+        .key(id.clone() + ".json.gz")
         .send()
         .await
     {
@@ -130,28 +157,111 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             return Ok(resp);
         }
     };
-    
+
+    let mut user = User {
+        username: match user_stats["username"].as_str() {
+            Some(resp) => resp.to_string(),
+            None => {
+                let resp = Response::builder()
+                    .status(400)
+                    .header("content-type", "text/html")
+                    .body(format!("Error parsing pokemonshowdown response username").into())
+                    .map_err(Box::new)?;
+                return Ok(resp);
+            }
+        },
+        userid: match user_stats["userid"].as_str() {
+            Some(resp) => resp.to_string(),
+            None => {
+                let resp = Response::builder()
+                    .status(400)
+                    .header("content-type", "text/html")
+                    .body(format!("Error parsing pokemonshowdown response userid").into())
+                    .map_err(Box::new)?;
+                return Ok(resp);
+            }
+        },
+        formats: vec![],
+    };
+
+    let current_time = get_current_timestamp();
+
     if let Value::Object(map) = user_stats["ratings"].clone() {
         for (key, value) in map {
-            let resp = Response::builder()
-                .status(200)
-                .header("content-type", "text/html")
-                .body(format!("Key: {}, Value: {}", key, value).into())
-                .map_err(Box::new)?;
-            return Ok(resp);
+            let mut format = Format {
+                name: key,
+                ratings: vec![],
+            };
+
+            format.ratings.push(Rating {
+                time: current_time,
+                elo: match value["elo"].as_f64() {
+                    Some(resp) => resp,
+                    None => {
+                        let resp = Response::builder()
+                            .status(400)
+                            .header("content-type", "text/html")
+                            .body(format!("Error parsing pokemonshowdown response elo").into())
+                            .map_err(Box::new)?;
+                        return Ok(resp);
+                    }
+                },
+            });
+
+            user.formats.push(format);
         }
     } else {
-        println!("The JSON is not an object!");
+        let resp = Response::builder()
+            .status(400)
+            .header("content-type", "text/html")
+            .body(format!("Error parsing pokemonshowdown response").into())
+            .map_err(Box::new)?;
+        return Ok(resp);
     }
 
     // compress json.
 
+    let user_string = match serde_json::to_string(&user) {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error parsing pokemonshowdown response").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(user_string.as_bytes()).unwrap();
+    let compressed_bytes = encoder.finish().unwrap();
+
     // write compressioned json to the S3 bucket with the
+
+    match s3
+        .put_object()
+        .bucket(user_stats_bucket.clone())
+        .key(id.clone() + ".json.gz")
+        .body(aws_sdk_s3::primitives::ByteStream::from(compressed_bytes))
+        .send()
+        .await
+    {
+        Ok(_) => {}
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error adding new user to datastore").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    }
 
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(format!("username: {username}, id: {id}").into())
+        .body(format!("username: {username}, id: {id}, User: {user_string}").into())
         .map_err(Box::new)?;
     Ok(resp)
 }
