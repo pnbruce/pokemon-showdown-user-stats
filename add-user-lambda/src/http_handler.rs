@@ -3,6 +3,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use lambda_http::{Body, Request, Response};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::env;
 use std::io::Write;
 use std::time::SystemTime;
@@ -14,16 +15,10 @@ struct Rating {
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-struct Format {
-    name: String,
-    ratings: Vec<Rating>,
-}
-
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct User {
     username: String,
     userid: String,
-    formats: Vec<Format>,
+    formats: HashMap<String, Vec<Rating>>,
 }
 
 fn get_current_timestamp() -> u64 {
@@ -68,11 +63,9 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
     };
 
-    // Parse the body as JSON
-    let parsed_json: Value = serde_json::from_str(&body).expect("Failed to parse JSON body");
+    let user_input: Value = serde_json::from_str(&body).expect("Failed to parse JSON body");
 
-    // Validate the "id" key exists
-    if let Some(username) = parsed_json.get("username") {
+    if let Some(username) = user_input.get("username") {
         if !username.is_string() {
             let resp = Response::builder()
                 .status(400)
@@ -90,50 +83,72 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         return Ok(resp);
     }
 
-    // Validate username
-    let username = parsed_json["username"]
+    let username = user_input["username"]
         .as_str()
         .expect("Failed to parse JSON body");
     let id = to_id(username);
 
-    let user_stats_bucket = env::var("USER_STATS_BUCKET").expect("Failed to parse JSON body");
-
-    // check if S3 contains an entry for this username
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let s3 = aws_sdk_s3::Client::new(&config);
 
-    match s3
-        .head_object()
-        .bucket(user_stats_bucket.clone())
-        .key(id.clone() + ".json.gz")
-        .send()
-        .await
-    {
-        Ok(_) => {
+    let ddb = aws_sdk_dynamodb::Client::new(&config);
+
+    let user_stats_table = match env::var("USER_STATS_TABLE") {
+        Ok(table) => table,
+        Err(_) => {
             let resp = Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body(format!("username: {username}, id: {id} has already been added").into())
+                .body("Failed to get USER_STATS_BUCKET from environment".into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
-        Err(_) => {}
-    }
+    };
 
-    // check if is on PS
-    let response = match reqwest::get(format!("https://pokemonshowdown.com/users/{id}.json")).await
+    let ddb_response = match ddb
+        .get_item()
+        .table_name(user_stats_table.clone())
+        .key(
+            "userId",
+            aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
+        )
+        .send()
+        .await
     {
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body(format!("username: {username}, id: {id} does not exist on PS").into())
+                .body(format!("User has already been added").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
     };
-    let body = match response.text().await {
+
+    if ddb_response.item.is_some() {
+        let resp = Response::builder()
+            .status(400)
+            .header("content-type", "text/html")
+            .body(format!("User has already been added").into())
+            .map_err(Box::new)?;
+        return Ok(resp);
+    }
+
+    // check if is on PS
+    let ps_response =
+        match reqwest::get(format!("https://pokemonshowdown.com/users/{id}.json")).await {
+            Ok(resp) => resp,
+            Err(_) => {
+                let resp = Response::builder()
+                    .status(400)
+                    .header("content-type", "text/html")
+                    .body(format!("username: {username}, id: {id} does not exist on PS").into())
+                    .map_err(Box::new)?;
+                return Ok(resp);
+            }
+        };
+
+    let ps_response_body = match ps_response.text().await {
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
@@ -146,7 +161,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     };
     // convert SP response into format stored in S3 for tracking stats
 
-    let user_stats: serde_json::Value = match serde_json::from_str(&body) {
+    let user_stats: serde_json::Value = match serde_json::from_str(&ps_response_body) {
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
@@ -181,21 +196,16 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
                 return Ok(resp);
             }
         },
-        formats: vec![],
+        formats: HashMap::new(),
     };
 
     let current_time = get_current_timestamp();
 
     if let Value::Object(map) = user_stats["ratings"].clone() {
-        for (key, value) in map {
-            let mut format = Format {
-                name: key,
-                ratings: vec![],
-            };
-
-            format.ratings.push(Rating {
+        for (format, rating) in map {
+            let ratings = vec![Rating {
                 time: current_time,
-                elo: match value["elo"].as_f64() {
+                elo: match rating["elo"].as_f64() {
                     Some(resp) => resp,
                     None => {
                         let resp = Response::builder()
@@ -206,9 +216,8 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
                         return Ok(resp);
                     }
                 },
-            });
-
-            user.formats.push(format);
+            }];
+            user.formats.insert(format, ratings);
         }
     } else {
         let resp = Response::builder()
@@ -218,8 +227,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             .map_err(Box::new)?;
         return Ok(resp);
     }
-
-    // compress json.
 
     let user_string = match serde_json::to_string(&user) {
         Ok(resp) => resp,
@@ -239,20 +246,26 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
 
     // write compressioned json to the S3 bucket with the
 
-    match s3
-        .put_object()
-        .bucket(user_stats_bucket.clone())
-        .key(id.clone() + ".json.gz")
-        .body(aws_sdk_s3::primitives::ByteStream::from(compressed_bytes))
+    match ddb
+        .put_item()
+        .item(
+            "userId",
+            aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
+        )
+        .item(
+            id.clone() + "Stats.json.gz",
+            aws_sdk_dynamodb::types::AttributeValue::B(compressed_bytes.clone().into()),
+        )
+        .table_name(user_stats_table.clone())
         .send()
         .await
     {
         Ok(_) => {}
-        Err(_) => {
+        Err(error) => {
             let resp = Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body(format!("Error adding new user to datastore").into())
+                .body(format!("Error adding new user to datastore: {error}").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
@@ -264,27 +277,4 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         .body(format!("username: {username}, id: {id}, User: {user_string}").into())
         .map_err(Box::new)?;
     Ok(resp)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use lambda_http::{Request, RequestExt};
-    use std::collections::HashMap;
-
-    #[tokio::test]
-    async fn test_generic_http_handler() {
-        let request = Request::default();
-
-        let response = function_handler(request).await.unwrap();
-        assert_eq!(response.status(), 200);
-
-        let body_bytes = response.body().to_vec();
-        let body_string = String::from_utf8(body_bytes).unwrap();
-
-        assert_eq!(
-            body_string,
-            "Hello world, this is an AWS Lambda HTTP request"
-        );
-    }
 }

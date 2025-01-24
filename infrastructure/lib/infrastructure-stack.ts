@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as path from "path";
-import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -54,17 +54,20 @@ export class InfrastructureStack extends cdk.Stack {
           "update-stats-lambda/target/lambda/update-stats-lambda")),
     });
 
-    const updateStatsEventRule = new events.Rule(this, 'EveryMinuteRule', {
+    const updateStatsEventRule = new events.Rule(this, 'UpdateStatsTrigger', {
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
     });
 
     updateStatsEventRule.addTarget(new targets.LambdaFunction(updateStatsLambda));
 
-    const bucket = new s3.Bucket(this, "UserStats");
-    bucket.grantReadWrite(addUserLambda);
-    bucket.grantReadWrite(updateStatsLambda);
-    addUserLambda.addEnvironment('USER_STATS_BUCKET', bucket.bucketName);
-    updateStatsLambda.addEnvironment('USER_STATS_BUCKET', bucket.bucketName);
+    const userStatsTable = new dynamodb.Table(this, 'UserStatsTable', {
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING }
+    });
+
+    addUserLambda.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
+    updateStatsLambda.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
+    userStatsTable.grantReadWriteData(addUserLambda);
+    userStatsTable.grantReadWriteData(updateStatsLambda);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: addUserApi.apiEndpoint,
