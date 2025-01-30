@@ -2,7 +2,7 @@ build-and-deploy:
 	@echo "Building and deploying to AWS"
 	@echo "Building..."
 	cd ./add-user-lambda && cargo lambda build --release --features reqwest/native-tls-vendored
-	cd ./update-stats-lambda && cargo lambda build --release --features reqwest/native-tls-vendored
+	cd ./update-stats && cargo build --release && docker build -t update-stats . 
 	@echo "Deploying..."
 	cd ./infrastructure && cdk synth && cdk deploy
 

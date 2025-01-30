@@ -5,8 +5,11 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as budgets from 'aws-cdk-lib/aws-budgets';
 
 export class InfrastructureStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -17,7 +20,10 @@ export class InfrastructureStack extends cdk.Stack {
       handler: "does.not.matter",
       code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
           "add-user-lambda/target/lambda/add-user-lambda")),
+      logRetention: logs.RetentionDays.ONE_WEEK
     });
+
+    addUserLambda.currentVersion.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
 
     const addUserApi = new apigatewayv2.HttpApi(this, 'AddUserApi', {
       apiName: 'add-user-api',
@@ -36,8 +42,8 @@ export class InfrastructureStack extends cdk.Stack {
     });
 
     const addUserThrottleSettings: apigatewayv2.ThrottleSettings = {
-      burstLimit: 200,
-      rateLimit: 1000,
+      burstLimit: 10,
+      rateLimit: 100,
     };
 
     const apiStage = new apigatewayv2.HttpStage(this, 'AddUserHttpApiStage', {
@@ -47,27 +53,71 @@ export class InfrastructureStack extends cdk.Stack {
       throttle: addUserThrottleSettings,
     });
 
-    const updateStatsLambda = new lambda.Function(this, "UpdateStats", {
-      runtime: lambda.Runtime.PROVIDED_AL2023,
-      handler: "does.not.matter",
-      code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
-          "update-stats-lambda/target/lambda/update-stats-lambda")),
-    });
-
-    const updateStatsEventRule = new events.Rule(this, 'UpdateStatsTrigger', {
-      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
-    });
-
-    updateStatsEventRule.addTarget(new targets.LambdaFunction(updateStatsLambda));
-
     const userStatsTable = new dynamodb.Table(this, 'UserStatsTable', {
-      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING }
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
     });
 
     addUserLambda.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
-    updateStatsLambda.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
     userStatsTable.grantReadWriteData(addUserLambda);
-    userStatsTable.grantReadWriteData(updateStatsLambda);
+
+    const updateStatsVpc = new ec2.Vpc(this, 'UpdateStatsVpc', {
+      natGateways: 0,
+      subnetConfiguration: [{
+        name: 'Public',
+        subnetType: ec2.SubnetType.PUBLIC,
+      }]
+    });
+
+    const updateStatsCluster = new ecs.Cluster(this, 'UpdateStatsFargateCluster', {
+      vpc: updateStatsVpc,
+    });
+
+    // const updateStatsDockerImage = new DockerImageAsset(this, 'UpdateStatsImage', {
+    //   directory: path.join(__dirname, '../../update-stats'),
+    // });
+
+    // const updateStatsTaskDefinition = new ecs.FargateTaskDefinition(this, 'UpdateStatsTaskDef', {
+    //   memoryLimitMiB: 512,
+    //   cpu: 256,
+    // });
+
+    // const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
+    //   image: ecs.ContainerImage.fromDockerImageAsset(updateStatsDockerImage),
+    //   logging: ecs.LogDriver.awsLogs({ streamPrefix: 'update-stats' }),
+    // });
+
+    // updateStatsContainer.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
+
+    // userStatsTable.grantReadWriteData(updateStatsContainer.taskDefinition.taskRole);
+
+    // const updateStatsFargateService = new ecs.FargateService(this, 'FargateService', {
+    //   cluster: updateStatsCluster,
+    //   taskDefinition: updateStatsTaskDefinition,
+    //   desiredCount: 1,
+    //   assignPublicIp: true
+    // });
+
+    new budgets.CfnBudget(this, 'FreeTierBudget', {
+      budget: {
+        budgetType: 'COST',
+        timeUnit: 'MONTHLY',
+        budgetLimit: {
+          amount: 1,
+          unit: 'USD'
+        }
+      },
+      notificationsWithSubscribers: [{
+        notification: {
+          comparisonOperator: 'GREATER_THAN',
+          threshold: 0.01,
+          notificationType: 'ACTUAL'
+        },
+        subscribers: [{
+          subscriptionType: 'EMAIL',
+          address: 'patricknbruce@gmail.com'
+        }]
+      }]
+    });
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: addUserApi.apiEndpoint,
