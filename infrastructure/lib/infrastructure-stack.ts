@@ -72,30 +72,29 @@ export class InfrastructureStack extends cdk.Stack {
       vpc: updateStatsVpc,
     });
 
-    // const updateStatsDockerImage = new DockerImageAsset(this, 'UpdateStatsImage', {
-    //   directory: path.join(__dirname, '../../update-stats'),
-    // });
+    const updateStatsDockerImage 
+        = ecs.ContainerImage.fromAsset(path.join(__dirname, '../../update-stats'));
 
-    // const updateStatsTaskDefinition = new ecs.FargateTaskDefinition(this, 'UpdateStatsTaskDef', {
-    //   memoryLimitMiB: 512,
-    //   cpu: 256,
-    // });
+    const updateStatsTaskDefinition = new ecs.FargateTaskDefinition(this, 'UpdateStatsTaskDef', {
+      memoryLimitMiB: 512,
+      cpu: 256,
+    });
 
-    // const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
-    //   image: ecs.ContainerImage.fromDockerImageAsset(updateStatsDockerImage),
-    //   logging: ecs.LogDriver.awsLogs({ streamPrefix: 'update-stats' }),
-    // });
+    const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
+      image: updateStatsDockerImage,
+      logging: ecs.LogDriver.awsLogs({ streamPrefix: 'update-stats' }),
+    });
 
-    // updateStatsContainer.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
+    updateStatsContainer.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
 
-    // userStatsTable.grantReadWriteData(updateStatsContainer.taskDefinition.taskRole);
+    userStatsTable.grantReadWriteData(updateStatsContainer.taskDefinition.taskRole);
 
-    // const updateStatsFargateService = new ecs.FargateService(this, 'FargateService', {
-    //   cluster: updateStatsCluster,
-    //   taskDefinition: updateStatsTaskDefinition,
-    //   desiredCount: 1,
-    //   assignPublicIp: true
-    // });
+    const updateStatsFargateService = new ecs.FargateService(this, 'UpdateStatsFargateService', {
+      cluster: updateStatsCluster,
+      taskDefinition: updateStatsTaskDefinition,
+      desiredCount: 1,
+      assignPublicIp: true
+    });
 
     new budgets.CfnBudget(this, 'FreeTierBudget', {
       budget: {
