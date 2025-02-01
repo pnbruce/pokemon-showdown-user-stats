@@ -88,6 +88,10 @@ export class InfrastructureStack extends cdk.Stack {
     const updateStatsTaskDefinition = new ecs.FargateTaskDefinition(this, 'UpdateStatsTaskDef', {
       memoryLimitMiB: 512,
       cpu: 256,
+      runtimePlatform: {
+        cpuArchitecture: ecs.CpuArchitecture.ARM64,
+        operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+      },
     });
 
     const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
