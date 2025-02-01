@@ -10,6 +10,7 @@ dependencies = [
  "aws-sdk-dynamodb",
  "flate2",
  "lambda_http",
+ "pokemon-showdown-user-stats-model",
  "reqwest",
  "serde",
  "serde_derive",
@@ -1523,6 +1524,15 @@ name = "pkg-config"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
+
+[[package]]
+name = "pokemon-showdown-user-stats-model"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3ea5687b94f3046fd349203d4587fc79d85a27478d9d05d881786a459154cbc"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "powerfmt"

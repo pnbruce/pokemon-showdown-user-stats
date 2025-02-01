@@ -7,19 +7,7 @@ use std::collections::HashMap;
 use std::env;
 use std::io::Write;
 use std::time::SystemTime;
-
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
-struct Rating {
-    time: u64,
-    elo: f64,
-}
-
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
-struct User {
-    username: String,
-    userid: String,
-    formats: HashMap<String, Vec<Rating>>,
-}
+use pokemon_showdown_user_stats_model::{Rating, User};
 
 fn get_current_timestamp() -> u64 {
     SystemTime::now()

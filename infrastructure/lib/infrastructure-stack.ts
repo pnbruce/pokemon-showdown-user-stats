@@ -20,7 +20,7 @@ export class InfrastructureStack extends cdk.Stack {
       handler: "does.not.matter",
       code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
           "add-user-lambda/target/lambda/add-user-lambda")),
-      logRetention: logs.RetentionDays.ONE_WEEK
+      logRetention: logs.RetentionDays.TWO_WEEKS
     });
 
     addUserLambda.currentVersion.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
@@ -68,6 +68,16 @@ export class InfrastructureStack extends cdk.Stack {
       }]
     });
 
+    const updateStatsLogGroup = new logs.LogGroup(this, 'UpdateStatsLogGroup', {
+      logGroupName: '/ecs/update-stats',
+      retention: logs.RetentionDays.ONE_WEEK, // Set log retention period
+    });
+
+    const updateStatsLogDriver = ecs.LogDriver.awsLogs({
+      logGroup: updateStatsLogGroup,
+      streamPrefix: 'update-stats',
+    });
+
     const updateStatsCluster = new ecs.Cluster(this, 'UpdateStatsFargateCluster', {
       vpc: updateStatsVpc,
     });
@@ -82,7 +92,7 @@ export class InfrastructureStack extends cdk.Stack {
 
     const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
       image: updateStatsDockerImage,
-      logging: ecs.LogDriver.awsLogs({ streamPrefix: 'update-stats' }),
+      logging: updateStatsLogDriver,
     });
 
     updateStatsContainer.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
@@ -93,7 +103,7 @@ export class InfrastructureStack extends cdk.Stack {
       cluster: updateStatsCluster,
       taskDefinition: updateStatsTaskDefinition,
       desiredCount: 1,
-      assignPublicIp: true
+      assignPublicIp: true,
     });
 
     new budgets.CfnBudget(this, 'FreeTierBudget', {

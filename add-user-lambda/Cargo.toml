@@ -13,3 +13,4 @@ serde_derive = "1.0"
 tokio = { version = "1", features = ["full", "macros"] }
 flate2 = "1.0.35"
 aws-sdk-dynamodb = "1.61.0"
+pokemon-showdown-user-stats-model = "0.1.0"
