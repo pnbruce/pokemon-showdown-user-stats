@@ -229,8 +229,28 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     };
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(user_string.as_bytes()).unwrap();
-    let compressed_bytes = encoder.finish().unwrap();
+    match encoder.write_all(user_string.as_bytes()) {
+        Ok(_) => {}
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error compressing json").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+    let compressed_bytes = match encoder.finish() {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body(format!("Error compressing json").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
 
     // write compressioned json to the S3 bucket with the
 
@@ -241,7 +261,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
         )
         .item(
-            id.clone() + "Stats.json.gz",
+            "Stats.json.gz",
             aws_sdk_dynamodb::types::AttributeValue::B(compressed_bytes.clone().into()),
         )
         .table_name(user_stats_table.clone())
