@@ -20,7 +20,7 @@ export class InfrastructureStack extends cdk.Stack {
       handler: "does.not.matter",
       code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
           "add-user-lambda/target/lambda/add-user-lambda")),
-      logRetention: logs.RetentionDays.TWO_WEEKS
+      logRetention: logs.RetentionDays.ONE_WEEK
     });
 
     addUserLambda.currentVersion.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);

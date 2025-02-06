@@ -6,7 +6,7 @@ COPY src ./src
 
 RUN apt-get update && apt-get install -y musl-tools
 RUN rustup target add aarch64-unknown-linux-musl
-RUN cargo build --release --target=aarch64-unknown-linux-musl
+RUN cargo build --release --target=aarch64-unknown-linux-musl --features reqwest/native-tls-vendored
 
 FROM debian:bullseye-slim
 

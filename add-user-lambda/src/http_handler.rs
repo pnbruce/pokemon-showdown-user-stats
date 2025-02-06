@@ -2,12 +2,12 @@ use aws_config::BehaviorVersion;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use lambda_http::{Body, Request, Response};
+use pokemon_showdown_user_stats_model::{Rating, User};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
 use std::io::Write;
 use std::time::SystemTime;
-use pokemon_showdown_user_stats_model::{Rating, User};
 
 fn get_current_timestamp() -> u64 {
     SystemTime::now()
@@ -51,7 +51,17 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
     };
 
-    let user_input: Value = serde_json::from_str(&body).expect("Failed to parse JSON body");
+    let user_input: Value = match serde_json::from_str(&body) {
+        Ok(resp) => resp,
+        Err(_) => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body("Failed to parse JSON body of user request".into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
 
     if let Some(username) = user_input.get("username") {
         if !username.is_string() {
@@ -86,7 +96,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             let resp = Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body("Failed to get USER_STATS_BUCKET from environment".into())
+                .body("Failed to get USER_STATS_TABLE from environment".into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
@@ -107,7 +117,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             let resp = Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body(format!("User has already been added").into())
+                .body(format!("error calling ddb").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
@@ -135,6 +145,15 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
                 return Ok(resp);
             }
         };
+
+    if ps_response.status().as_u16() != 200 {
+        let resp = Response::builder()
+            .status(400)
+            .header("content-type", "text/html")
+            .body(format!("pokemon shodown api replied with status code: {} for user: {username}, id: {id}", ps_response.status()).into())
+            .map_err(Box::new)?;
+        return Ok(resp);
+    }
 
     let ps_response_body = match ps_response.text().await {
         Ok(resp) => resp,
@@ -189,32 +208,35 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
 
     let current_time = get_current_timestamp();
 
-    if let Value::Object(map) = user_stats["ratings"].clone() {
+    if let Some(Value::Object(map)) = user_stats.get("ratings") {
         for (format, rating) in map {
+            let elo = match rating.get("elo").and_then(Value::as_f64) {
+                Some(val) => val,
+                None => {
+                    let resp = Response::builder()
+                        .status(400)
+                        .header("content-type", "text/html")
+                        .body("Error parsing pokemonshowdown response elo".into())
+                        .map_err(Box::new)?;
+                    return Ok(resp);
+                }
+            };
+    
             let ratings = vec![Rating {
                 time: current_time,
-                elo: match rating["elo"].as_f64() {
-                    Some(resp) => resp,
-                    None => {
-                        let resp = Response::builder()
-                            .status(400)
-                            .header("content-type", "text/html")
-                            .body(format!("Error parsing pokemonshowdown response elo").into())
-                            .map_err(Box::new)?;
-                        return Ok(resp);
-                    }
-                },
+                elo,
             }];
-            user.formats.insert(format, ratings);
+            user.formats.insert(format.clone(), ratings);
         }
     } else {
         let resp = Response::builder()
             .status(400)
             .header("content-type", "text/html")
-            .body(format!("Error parsing pokemonshowdown response").into())
+            .body("Error parsing pokemonshowdown response".into())
             .map_err(Box::new)?;
         return Ok(resp);
     }
+    
 
     let user_string = match serde_json::to_string(&user) {
         Ok(resp) => resp,
@@ -261,7 +283,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
         )
         .item(
-            "Stats.json.gz",
+            "stats.json.gz",
             aws_sdk_dynamodb::types::AttributeValue::B(compressed_bytes.clone().into()),
         )
         .table_name(user_stats_table.clone())
@@ -271,7 +293,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Ok(_) => {}
         Err(error) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error adding new user to datastore: {error}").into())
                 .map_err(Box::new)?;
