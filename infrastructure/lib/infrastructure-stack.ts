@@ -7,7 +7,6 @@ import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
 
@@ -25,32 +24,32 @@ export class InfrastructureStack extends cdk.Stack {
 
     addUserLambda.currentVersion.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
 
-    const addUserApi = new apigatewayv2.HttpApi(this, 'AddUserApi', {
-      apiName: 'add-user-api',
-      description: 'An HTTP API to add user to begin tracking stats',
-    });
-
-    const lambdaIntegration = new integrations.HttpLambdaIntegration(
+    const addUserLambdaIntegration = new integrations.HttpLambdaIntegration(
       'AddUserLambdaIntegration',
       addUserLambda
     );
 
-    addUserApi.addRoutes({
-      path: '/user-stats',
-      methods: [apigatewayv2.HttpMethod.PUT],
-      integration: lambdaIntegration,
+    const userStatsApi = new apigatewayv2.HttpApi(this, 'UserStatsApi', {
+      apiName: 'user-stats-api',
+      description: 'An HTTP API to start tracking and access user statistics',
     });
 
-    const addUserThrottleSettings: apigatewayv2.ThrottleSettings = {
+    userStatsApi.addRoutes({
+      path: '/user-stats',
+      methods: [apigatewayv2.HttpMethod.PUT],
+      integration: addUserLambdaIntegration,
+    });
+
+    const userStatsThrottleSettings: apigatewayv2.ThrottleSettings = {
       burstLimit: 10,
       rateLimit: 100,
     };
 
-    const apiStage = new apigatewayv2.HttpStage(this, 'AddUserHttpApiStage', {
-      httpApi: addUserApi,
+    const userStatsApiStage = new apigatewayv2.HttpStage(this, 'UserStatsHttpApiStage', {
+      httpApi: userStatsApi,
       stageName: 'prod',
       autoDeploy: true,
-      throttle: addUserThrottleSettings,
+      throttle: userStatsThrottleSettings,
     });
 
     const userStatsTable = new dynamodb.Table(this, 'UserStatsTable', {
@@ -110,6 +109,30 @@ export class InfrastructureStack extends cdk.Stack {
       assignPublicIp: true,
     });
 
+    const getUserLambda = new lambda.Function(this, "GetUser", {
+      runtime: lambda.Runtime.PROVIDED_AL2023,
+      handler: "does.not.matter",
+      code: lambda.Code.fromAsset(path.join(__dirname, "..", "..", 
+          "get-user-lambda/target/lambda/get-user-lambda")),
+      logRetention: logs.RetentionDays.ONE_WEEK
+    });
+
+    getUserLambda.currentVersion.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+
+    getUserLambda.addEnvironment('USER_STATS_TABLE', userStatsTable.tableName);
+    userStatsTable.grantReadWriteData(getUserLambda);
+
+    const getUserLambdaIntegration = new integrations.HttpLambdaIntegration(
+      'GetUserLambdaIntegration',
+      getUserLambda
+    );
+
+    userStatsApi.addRoutes({
+      path: '/user-stats',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: getUserLambdaIntegration,
+    });
+
     new budgets.CfnBudget(this, 'FreeTierBudget', {
       budget: {
         budgetType: 'COST',
@@ -132,9 +155,9 @@ export class InfrastructureStack extends cdk.Stack {
       }]
     });
 
-    new cdk.CfnOutput(this, 'ApiUrl', {
-      value: addUserApi.apiEndpoint,
-      description: 'The endpoint URL of the HTTP API',
+    new cdk.CfnOutput(this, 'UserStatsApiUrl', {
+      value: userStatsApi.apiEndpoint,
+      description: 'The endpoint URL of the UserStatsAp HTTP API',
     });
   }
 }

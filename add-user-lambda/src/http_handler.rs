@@ -81,9 +81,17 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         return Ok(resp);
     }
 
-    let username = user_input["username"]
-        .as_str()
-        .expect("Failed to parse JSON body");
+    let username = match user_input["username"].as_str() {
+        Some(resp) => resp,
+        None => {
+            let resp = Response::builder()
+                .status(400)
+                .header("content-type", "text/html")
+                .body("Failed to parse JSON body of user request".into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
     let id = to_id(username);
 
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
@@ -94,7 +102,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Ok(table) => table,
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body("Failed to get USER_STATS_TABLE from environment".into())
                 .map_err(Box::new)?;
@@ -138,9 +146,9 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             Ok(resp) => resp,
             Err(_) => {
                 let resp = Response::builder()
-                    .status(400)
+                    .status(500)
                     .header("content-type", "text/html")
-                    .body(format!("username: {username}, id: {id} does not exist on PS").into())
+                    .body(format!("id: {id} Unable to connect to PokemonShowdown").into())
                     .map_err(Box::new)?;
                 return Ok(resp);
             }
@@ -148,7 +156,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
 
     if ps_response.status().as_u16() != 200 {
         let resp = Response::builder()
-            .status(400)
+            .status(500)
             .header("content-type", "text/html")
             .body(format!("pokemon shodown api replied with status code: {} for user: {username}, id: {id}", ps_response.status()).into())
             .map_err(Box::new)?;
@@ -159,7 +167,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error parsing pokemonshowdown response").into())
                 .map_err(Box::new)?;
@@ -172,7 +180,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error parsing pokemonshowdown response").into())
                 .map_err(Box::new)?;
@@ -180,12 +188,33 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
     };
 
+    let register_time = match user_stats["registertime"].as_i64() {
+        Some(resp) => resp,
+        None => {
+            let resp = Response::builder()
+                .status(500)
+                .header("content-type", "text/html")
+                .body(format!("Error parsing pokemonshowdown response registertime").into())
+                .map_err(Box::new)?;
+            return Ok(resp);
+        }
+    };
+
+    if register_time == 0 {
+        let resp = Response::builder()
+            .status(404)
+            .header("content-type", "text/html")
+            .body(format!("User has not registered on Pokemon Showdown").into())
+            .map_err(Box::new)?;
+        return Ok(resp);
+    }
+
     let mut user = User {
         username: match user_stats["username"].as_str() {
             Some(resp) => resp.to_string(),
             None => {
                 let resp = Response::builder()
-                    .status(400)
+                    .status(500)
                     .header("content-type", "text/html")
                     .body(format!("Error parsing pokemonshowdown response username").into())
                     .map_err(Box::new)?;
@@ -196,7 +225,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             Some(resp) => resp.to_string(),
             None => {
                 let resp = Response::builder()
-                    .status(400)
+                    .status(500)
                     .header("content-type", "text/html")
                     .body(format!("Error parsing pokemonshowdown response userid").into())
                     .map_err(Box::new)?;
@@ -214,14 +243,14 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
                 Some(val) => val,
                 None => {
                     let resp = Response::builder()
-                        .status(400)
+                        .status(500)
                         .header("content-type", "text/html")
                         .body("Error parsing pokemonshowdown response elo".into())
                         .map_err(Box::new)?;
                     return Ok(resp);
                 }
             };
-    
+
             let ratings = vec![Rating {
                 time: current_time,
                 elo,
@@ -230,19 +259,18 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
     } else {
         let resp = Response::builder()
-            .status(400)
+            .status(500)
             .header("content-type", "text/html")
             .body("Error parsing pokemonshowdown response".into())
             .map_err(Box::new)?;
         return Ok(resp);
     }
-    
 
     let user_string = match serde_json::to_string(&user) {
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error parsing pokemonshowdown response").into())
                 .map_err(Box::new)?;
@@ -255,18 +283,19 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Ok(_) => {}
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error compressing json").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
     };
+
     let compressed_bytes = match encoder.finish() {
         Ok(resp) => resp,
         Err(_) => {
             let resp = Response::builder()
-                .status(400)
+                .status(500)
                 .header("content-type", "text/html")
                 .body(format!("Error compressing json").into())
                 .map_err(Box::new)?;
