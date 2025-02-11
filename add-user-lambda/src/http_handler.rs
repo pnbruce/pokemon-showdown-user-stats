@@ -154,11 +154,21 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             }
         };
 
+    if ps_response.status().as_u16() == 404 {
+        let resp = Response::builder()
+            .status(404)
+            .header("content-type", "text/html")
+            .body(format!("User not found on Pokemon Showdown").into())
+            .map_err(Box::new)?;
+        return Ok(resp);
+    }
+
     if ps_response.status().as_u16() != 200 {
         let resp = Response::builder()
             .status(500)
             .header("content-type", "text/html")
-            .body(format!("pokemon shodown api replied with status code: {} for user: {username}, id: {id}", ps_response.status()).into())
+            .body(format!("pokemon shodown api replied with status code: {} for user: {username}, id: {id}", 
+                ps_response.status()).into())
             .map_err(Box::new)?;
         return Ok(resp);
     }
@@ -187,27 +197,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             return Ok(resp);
         }
     };
-
-    let register_time = match user_stats["registertime"].as_i64() {
-        Some(resp) => resp,
-        None => {
-            let resp = Response::builder()
-                .status(500)
-                .header("content-type", "text/html")
-                .body(format!("Error parsing pokemonshowdown response registertime").into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    };
-
-    if register_time == 0 {
-        let resp = Response::builder()
-            .status(404)
-            .header("content-type", "text/html")
-            .body(format!("User has not registered on Pokemon Showdown").into())
-            .map_err(Box::new)?;
-        return Ok(resp);
-    }
 
     let mut user = User {
         username: match user_stats["username"].as_str() {
