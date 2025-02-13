@@ -1,9 +1,6 @@
-import { useState } from 'react'
-
 import './App.css'
-import { Button } from "@/components/ui/button"
-import { type ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { Bar, BarChart } from "recharts"
+import { MultiLineChart } from "@/components/ui/multi-line-chart"
+import { type ChartConfig } from "@/components/ui/chart"
 
 const chartConfig = {
   desktop: {
@@ -26,17 +23,9 @@ const chartData = [
 ]
 
 function App() {
-
   return (
-    <>
-      <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-        <BarChart accessibilityLayer data={chartData}>
-          <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-          <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
-        </BarChart>
-      </ChartContainer>
-    </>
-  )
+    <MultiLineChart username='the_brucey'/>
+  );
 }
 
 export default App

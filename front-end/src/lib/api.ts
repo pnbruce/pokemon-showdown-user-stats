@@ -1,0 +1,39 @@
+import axios from "axios";
+
+export interface Rating {
+    time: number;
+    elo: number;
+}
+
+export interface Formats {
+    [format: string]: Rating[];
+}
+
+export interface UserStats {
+    username: string;
+    userid: string;
+    formats: Formats;
+}
+
+const API_BASE_URL = "https://jv5tw21pea.execute-api.us-west-2.amazonaws.com";
+
+export const getUserStats = async (username: string): Promise<UserStats> => {
+    const uri = `${API_BASE_URL}/user-stats/${username}`;
+    try {
+        const response = await axios.get<UserStats>(uri);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching user stats: ${uri}`, error);
+        throw error;
+    }
+};
+
+export const updateUserStats = async (username: string): Promise<UserStats> => {
+    try {
+        const response = await axios.put<UserStats>(`${API_BASE_URL}/user-stats/${username}`);
+        return response.data;
+    } catch (error) {
+        console.error("Error updating user stats:", error);
+        throw error;
+    }
+};
