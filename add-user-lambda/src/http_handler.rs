@@ -1,7 +1,7 @@
 use aws_config::BehaviorVersion;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use lambda_http::{Body, Request, Response};
+use lambda_http::{Body, Request, RequestExt, Response};
 use pokemon_showdown_user_stats_model::{Rating, User};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -25,73 +25,25 @@ fn to_id<T: AsRef<str>>(text: T) -> String {
         .collect()
 }
 
-fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
-    match event.body() {
-        Body::Text(text) => return Result::Ok(text.clone()),
-        Body::Binary(_) => return Result::Err("Request body is binary".into()),
-        Body::Empty => return Result::Err("Request body is empty"),
-    };
-}
-
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, lambda_http::Error> {
-    // Extract request details
-    let body = match extract_body(event) {
-        Ok(resp) => resp,
-        Err(_) => {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Failed to extract body from user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    };
-
-    let user_input: Value = match serde_json::from_str(&body) {
-        Ok(resp) => resp,
-        Err(_) => {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Failed to parse JSON body of user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    };
-
-    if let Some(username) = user_input.get("username") {
-        if !username.is_string() {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Key 'username' is not a string".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    } else {
-        let resp = Response::builder()
-            .status(400)
-            .header("content-type", "text/html")
-            .body("Key 'username' is missing".into())
-            .map_err(Box::new)?;
-        return Ok(resp);
-    }
-
-    let username = match user_input["username"].as_str() {
-        Some(resp) => resp,
+    let username = match event
+        .path_parameters_ref()
+        .and_then(|params| params.first("username"))
+    {
+        Some(value) => value,
         None => {
-            let resp = Response::builder()
+            // Return a 400 Bad Request response if username is missing.
+            return Ok(Response::builder()
                 .status(400)
-                .header("content-type", "text/html")
-                .body("Failed to parse JSON body of user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
+                .body("Key 'username' is missing".into())
+                .map_err(Box::new)?);
         }
     };
+
     let id = to_id(username);
 
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
@@ -103,7 +55,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         Err(_) => {
             let resp = Response::builder()
                 .status(500)
-                .header("content-type", "text/html")
                 .body("Failed to get USER_STATS_TABLE from environment".into())
                 .map_err(Box::new)?;
             return Ok(resp);

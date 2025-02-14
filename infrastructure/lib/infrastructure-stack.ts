@@ -35,7 +35,7 @@ export class InfrastructureStack extends cdk.Stack {
     });
 
     userStatsApi.addRoutes({
-      path: '/user-stats',
+      path: '/user-stats/{username}',
       methods: [apigatewayv2.HttpMethod.PUT],
       integration: addUserLambdaIntegration,
     });
@@ -128,7 +128,7 @@ export class InfrastructureStack extends cdk.Stack {
     );
 
     userStatsApi.addRoutes({
-      path: '/user-stats',
+      path: '/user-stats/{username}',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: getUserLambdaIntegration,
     });

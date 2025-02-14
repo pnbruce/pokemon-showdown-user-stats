@@ -1,7 +1,6 @@
 use aws_config::BehaviorVersion;
 use flate2::read::GzDecoder;
-use lambda_http::{Body, Error, Request, Response};
-use serde_json::Value;
+use lambda_http::{Body, Error, Request, RequestExt, Response};
 use std::env;
 use std::io::Read;
 
@@ -10,58 +9,18 @@ use std::io::Read;
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    // Extract some useful information from the request
-    let event_body = match extract_body(event) {
-        Ok(resp) => resp,
-        Err(_) => {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Failed to extract body from user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    };
-
-    let event_body_value: Value = match serde_json::from_str(&event_body) {
-        Ok(resp) => resp,
-        Err(_) => {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Failed to parse JSON body of user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    };
-
-    if let Some(username) = event_body_value.get("username") {
-        if !username.is_string() {
-            let resp = Response::builder()
-                .status(400)
-                .header("content-type", "text/html")
-                .body("Key 'username' is not a string".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
-        }
-    } else {
-        let resp = Response::builder()
-            .status(400)
-            .header("content-type", "text/html")
-            .body("Key 'username' is missing".into())
-            .map_err(Box::new)?;
-        return Ok(resp);
-    }
-
-    let username = match event_body_value["username"].as_str() {
-        Some(resp) => resp,
+    let username = match event
+        .path_parameters_ref()
+        .and_then(|params| params.first("username"))
+    {
+        Some(value) => value,
         None => {
-            let resp = Response::builder()
+            // Return a 400 Bad Request response if username is missing.
+            return Ok(Response::builder()
                 .status(400)
                 .header("content-type", "text/html")
-                .body("Failed to parse JSON body of user request".into())
-                .map_err(Box::new)?;
-            return Ok(resp);
+                .body("Key 'username' is missing".into())
+                .map_err(Box::new)?);
         }
     };
 
@@ -149,33 +108,21 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
         Err(_) => {
             let resp = Response::builder()
                 .status(500)
-                .header("content-type", "text/html")
                 .body(format!("Error decompressing Gzipped JSON").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
     }
 
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
     let resp = Response::builder()
         .status(200)
-        .header("content-type", "text/html")
+        .header("content-type", "application/json")
         .body(stats_json.into())
         .map_err(Box::new)?;
     Ok(resp)
 }
 
-fn extract_body(event: Request) -> Result<std::string::String, &'static str> {
-    match event.body() {
-        Body::Text(text) => return Result::Ok(text.clone()),
-        Body::Binary(_) => return Result::Err("Request body is binary"),
-        Body::Empty => return Result::Err("Request body is empty"),
-    };
-}
-
 fn to_id<T: AsRef<str>>(text: T) -> String {
-    // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
     text.as_ref()
         .to_lowercase()
         .chars()
