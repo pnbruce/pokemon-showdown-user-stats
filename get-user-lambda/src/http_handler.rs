@@ -1,4 +1,5 @@
 use aws_config::BehaviorVersion;
+use aws_sdk_dynamodb::client::Client;
 use flate2::read::GzDecoder;
 use lambda_http::{Body, Error, Request, RequestExt, Response};
 use std::env;
@@ -28,7 +29,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
 
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
 
-    let ddb = aws_sdk_dynamodb::Client::new(&config);
+    let ddb = Client::new(&config);
 
     let user_stats_table = match env::var("USER_STATS_TABLE") {
         Ok(table) => table,

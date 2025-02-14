@@ -1,7 +1,8 @@
-use lambda_http::{http::Method, service_fn, tower::ServiceBuilder, tracing, Body, Error, IntoResponse, Request, RequestExt, Response,};
+use lambda_http::{http::Method, service_fn, tower::ServiceBuilder, tracing, Error};
 mod http_handler;
 use http_handler::function_handler;
 use tower_http::cors::{Any, CorsLayer};
+
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
