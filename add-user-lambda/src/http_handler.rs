@@ -25,10 +25,6 @@ fn to_id<T: AsRef<str>>(text: T) -> String {
         .collect()
 }
 
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, lambda_http::Error> {
     let username = match event
         .path_parameters_ref()
@@ -36,7 +32,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     {
         Some(value) => value,
         None => {
-            // Return a 400 Bad Request response if username is missing.
             return Ok(Response::builder()
                 .status(400)
                 .body("Key 'username' is missing".into())
@@ -66,7 +61,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         .table_name(user_stats_table.clone())
         .key(
             "userId",
-            aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
+            aws_sdk_dynamodb::types::AttributeValue::S(id),
         )
         .send()
         .await
@@ -109,7 +104,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         let resp = Response::builder()
             .status(404)
             .header("content-type", "text/html")
-            .body(format!("User not found on Pokemon Showdown").into())
+            .body(format!("User not registered on Pokemon Showdown").into())
             .map_err(Box::new)?;
         return Ok(resp);
     }
@@ -135,7 +130,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
             return Ok(resp);
         }
     };
-    // convert SP response into format stored in S3 for tracking stats
 
     let user_stats: serde_json::Value = match serde_json::from_str(&ps_response_body) {
         Ok(resp) => resp,
@@ -243,8 +237,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         }
     };
 
-    // write compressioned json to the S3 bucket with the
-
     match ddb
         .put_item()
         .item(
@@ -277,3 +269,5 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         .map_err(Box::new)?;
     Ok(resp)
 }
+
+
