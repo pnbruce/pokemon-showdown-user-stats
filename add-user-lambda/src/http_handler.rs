@@ -1,4 +1,3 @@
-use aws_config::BehaviorVersion;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use lambda_http::{Body, Request, RequestExt, Response};
@@ -25,7 +24,10 @@ fn to_id<T: AsRef<str>>(text: T) -> String {
         .collect()
 }
 
-pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, lambda_http::Error> {
+pub(crate) async fn function_handler(
+    ddb: &aws_sdk_dynamodb::Client,
+    event: Request,
+) -> Result<Response<Body>, lambda_http::Error> {
     let username = match event
         .path_parameters_ref()
         .and_then(|params| params.first("username"))
@@ -40,10 +42,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
     };
 
     let id = to_id(username);
-
-    let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-
-    let ddb = aws_sdk_dynamodb::Client::new(&config);
 
     let user_stats_table = match env::var("USER_STATS_TABLE") {
         Ok(table) => table,
@@ -61,7 +59,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         .table_name(user_stats_table.clone())
         .key(
             "userId",
-            aws_sdk_dynamodb::types::AttributeValue::S(id),
+            aws_sdk_dynamodb::types::AttributeValue::S(id.clone()),
         )
         .send()
         .await
@@ -269,5 +267,3 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, l
         .map_err(Box::new)?;
     Ok(resp)
 }
-
-
