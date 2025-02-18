@@ -1,5 +1,3 @@
-use aws_config::BehaviorVersion;
-use aws_sdk_dynamodb::client::Client;
 use flate2::read::GzDecoder;
 use lambda_http::{Body, Error, Request, RequestExt, Response};
 use std::env;
@@ -9,7 +7,10 @@ use std::io::Read;
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
-pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+pub(crate) async fn function_handler(
+    ddb: &aws_sdk_dynamodb::Client,
+    event: Request,
+) -> Result<Response<Body>, Error> {
     let username = match event
         .path_parameters_ref()
         .and_then(|params| params.first("username"))
@@ -26,10 +27,6 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     };
 
     let id = to_id(username);
-
-    let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-
-    let ddb = Client::new(&config);
 
     let user_stats_table = match env::var("USER_STATS_TABLE") {
         Ok(table) => table,

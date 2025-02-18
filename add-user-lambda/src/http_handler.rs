@@ -8,22 +8,6 @@ use std::env;
 use std::io::Write;
 use std::time::SystemTime;
 
-fn get_current_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("Time error")
-        .as_secs()
-}
-
-fn to_id<T: AsRef<str>>(text: T) -> String {
-    // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
-    text.as_ref()
-        .to_lowercase()
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
-        .collect()
-}
-
 pub(crate) async fn function_handler(
     ddb: &aws_sdk_dynamodb::Client,
     event: Request,
@@ -266,4 +250,20 @@ pub(crate) async fn function_handler(
         .body(format!("username: {username}, id: {id}, User: {user_string}").into())
         .map_err(Box::new)?;
     Ok(resp)
+}
+
+fn get_current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Time error")
+        .as_secs()
+}
+
+fn to_id<T: AsRef<str>>(text: T) -> String {
+    // Ensure the input is a string, convert it to lowercase, and remove non-alphanumeric characters
+    text.as_ref()
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect()
 }

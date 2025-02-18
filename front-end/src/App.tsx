@@ -24,7 +24,7 @@ const chartData = [
 
 function App() {
   return (
-    <MultiLineChart username='Ampha'/>
+    <MultiLineChart username='the_brucey'/>
   );
 }
 
