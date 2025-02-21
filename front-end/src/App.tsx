@@ -16,13 +16,18 @@ const chartConfig = {
 } satisfies ChartConfig
 
 function App() {
+  // chart in the middle and form on the right hand side
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Multi-Line Chart</h1>
-      </header>
-      <MultiLineChart username='the_brucey'/>
-      <ProfileForm/>
+      <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
+
+        <div className="App-chart">
+          <MultiLineChart username='the_brucey'/>
+        </div>
+        <div className="App-form">
+          <ProfileForm/>
+        </div>
+      </div>
     </div>
   );
 }
