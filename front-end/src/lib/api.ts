@@ -20,6 +20,7 @@ const API_BASE_URL = "https://jv5tw21pea.execute-api.us-west-2.amazonaws.com";
 export const getUserStats = async (username: string): Promise<UserStats> => {
     const uri = `${API_BASE_URL}/user-stats/${username}`;
     try {
+        console.log(`Fetching user stats: ${uri}`);
         const response = await axios.get<UserStats>(uri);
         return response.data;
     } catch (error) {

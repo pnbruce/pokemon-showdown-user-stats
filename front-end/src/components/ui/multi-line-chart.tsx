@@ -5,7 +5,6 @@ import { getUserStats, UserStats, Rating } from "@/lib/api"
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
@@ -34,7 +33,7 @@ const randomsRatings = (username: string) => {
         };
 
         fetchData();
-    }, []);
+    }, [username]);
 
     if (!dataAvailable) return [];
 

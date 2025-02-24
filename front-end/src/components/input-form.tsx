@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -20,20 +19,16 @@ const formSchema = z.object({
   username: z.string(),
 })
 
-export function ProfileForm() {
-  // 1. Define your form.
+export function ProfileForm({ setUserName }: { setUserName: (username: string) => void }) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
     },
   })
- 
-  // 2. Define a submit handler.
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
+    setUserName(values.username);
   }
 
   return (
