@@ -1,6 +1,5 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { useState, useEffect } from "react";
-import { getUserStats, UserStats, Rating } from "@/lib/api"
+import { UserStats, Rating } from "@/lib/api"
 
 import {
     Card,
@@ -15,27 +14,10 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const randomsRatings = (username: string) => {
-    const [data, setData] = useState<UserStats | null>(null);
-    const [dataAvailable, setDataAvailable] = useState<boolean>(false);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (data === null) {
-                try {
-                    const result = await getUserStats(username);
-                    setData(result);
-                    setDataAvailable(true);
-                } catch (err) {
-                    setDataAvailable(false);
-                }
-            }
-        };
-
-        fetchData();
-    }, [username]);
-
-    if (!dataAvailable) return [];
+const randomsRatings = (data: UserStats | null) => {
+    if (data === null) {
+        return [];
+    }
 
     const randomsRatings: Rating[] = data?.formats.gen9randombattle || [];
 
@@ -71,7 +53,11 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username }: { username: string }) => {
+export const MultiLineChart = ({ username, data }: {
+    username: string,
+    data: UserStats | null
+}) => {
+
     return (
         <Card>
             <CardHeader>
@@ -81,7 +67,7 @@ export const MultiLineChart = ({ username }: { username: string }) => {
                 <ChartContainer config={chartConfig}>
                     <LineChart
                         accessibilityLayer
-                        data={randomsRatings(username)}
+                        data={randomsRatings(data)}
                         margin={{
                             left: 12,
                             right: 12,
