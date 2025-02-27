@@ -1,8 +1,8 @@
 import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
 import { ProfileForm } from "@/components/input-form"
-import { useState, useEffect } from "react";
-import { getUserStats, UserStats} from "@/lib/api"
+import { useState} from "react";
+import {UserStats} from "@/lib/api"
 
 
 function App() {

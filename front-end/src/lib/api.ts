@@ -22,6 +22,10 @@ export const getUserStats = async (username: string): Promise<UserStats> => {
     try {
         console.log(`Fetching user stats: ${uri}`);
         const response = await axios.get<UserStats>(uri);
+        if (response.status !== 200) {
+            throw new Error(`Failed to fetch user stats: ${response.status}, 
+            ${response.statusText}`);
+        }
         return response.data;
     } catch (error) {
         console.error(`Error fetching user stats: ${uri}`, error);

@@ -10,7 +10,6 @@ import {
     FormControl,
     FormField,
     FormItem,
-    FormLabel,
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -35,6 +34,7 @@ export function ProfileForm({ setUserName, setUserStats}: {
         setUserName(values.username);
         try {
             const userStats = await getUserStats(values.username);
+            console.log(userStats);
             setUserStats(userStats);
         } catch (error) {
             setUserStats(null);
@@ -49,7 +49,6 @@ export function ProfileForm({ setUserName, setUserStats}: {
                     name="username"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Username</FormLabel>
                             <FormControl>
                                 <Input placeholder="Showdown username..." {...field} />
                             </FormControl>
