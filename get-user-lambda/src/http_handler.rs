@@ -52,10 +52,10 @@ pub(crate) async fn function_handler(
     {
         Ok(resp) => resp,
         Err(_) => {
-            let resp = Response::builder()
-                .status(200)
+                        let resp = Response::builder()
+                .status(500)
                 .header("content-type", "text/html")
-                .body("User does not exist, please add it".into())
+                .body(format!("database error").into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
@@ -65,9 +65,9 @@ pub(crate) async fn function_handler(
         Some(item) => item,
         None => {
             let resp = Response::builder()
-                .status(500)
+                .status(404)
                 .header("content-type", "text/html")
-                .body("error getting user from database".into())
+                .body("User Does not exist in the database".into())
                 .map_err(Box::new)?;
             return Ok(resp);
         }
