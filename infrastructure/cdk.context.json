@@ -4,5 +4,13 @@
     "us-west-2b",
     "us-west-2c",
     "us-west-2d"
-  ]
+  ],
+  "acknowledged-issue-numbers": [
+    32775,
+    32775
+  ],
+  "hosted-zone:account=147997160234:domainName=pokemonshowdownuserstats.com:region=us-east-1": {
+    "Id": "/hostedzone/Z00757991YNQV4VSRCMIA",
+    "Name": "pokemonshowdownuserstats.com."
+  }
 }

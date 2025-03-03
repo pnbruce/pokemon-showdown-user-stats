@@ -7,7 +7,7 @@ export class CertificateStack extends cdk.Stack {
   public readonly certificateArn: string;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, { ...props, env: { region: 'us-east-1' } });
+    super(scope, id, props);
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'pokemonshowdownuserstats.com',
