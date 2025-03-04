@@ -15,6 +15,7 @@ export class CertificateStack extends cdk.Stack {
 
     const certificate = new certificatemanager.Certificate(this, 'SiteCertificate', {
       domainName: 'pokemonshowdownuserstats.com',
+      subjectAlternativeNames: ['www.pokemonshowdownuserstats.com'],
       validation: certificatemanager.CertificateValidation.fromDns(hostedZone),
     });
 
