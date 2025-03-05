@@ -21,7 +21,7 @@ export class CertificateStack extends cdk.Stack {
 
     this.certificateArn = certificate.certificateArn;
 
-    new cdk.CfnOutput(this, 'CertificateArn', {
+    new cdk.CfnOutput(this, 'certificateArn', {
       value: certificate.certificateArn,
     });
   }

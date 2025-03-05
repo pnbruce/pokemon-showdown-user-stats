@@ -1,17 +1,26 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 import * as path from "path";
 
+export interface InfrastructureStackProps extends cdk.StackProps {
+  certificateArn: string; // ARN of the certificate created in CertificateStack
+}
+
 export class InfrastructureStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: InfrastructureStackProps) {
     super(scope, id, props);
 
     const addUserLambda = new lambda.Function(this, "AddUser", {
@@ -135,31 +144,77 @@ export class InfrastructureStack extends cdk.Stack {
       integration: getUserLambdaIntegration,
     });
 
-    new budgets.CfnBudget(this, 'FreeTierBudget', {
-      budget: {
-        budgetType: 'COST',
-        timeUnit: 'MONTHLY',
-        budgetLimit: {
-          amount: 1,
-          unit: 'USD'
-        }
-      },
-      notificationsWithSubscribers: [{
-        notification: {
-          comparisonOperator: 'GREATER_THAN',
-          threshold: 0.01,
-          notificationType: 'ACTUAL'
+    const certificate = certificatemanager.Certificate.fromCertificateArn(
+      this,
+      'SiteCertificate',
+      props.certificateArn
+    );
+        // Create a custom cache policy with a TTL of 1 minute (60 seconds)
+        const cachePolicy = new cloudfront.CachePolicy(this, 'OneMinuteCachePolicy', {
+          cachePolicyName: 'OneMinuteCachePolicy',
+          defaultTtl: cdk.Duration.seconds(60),
+          minTtl: cdk.Duration.seconds(60),
+          maxTtl: cdk.Duration.seconds(60),
+          cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+          headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+          queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+        });
+    
+      // Create a CloudFront distribution that fronts the API Gateway endpoint.
+      // The origin points to the API Gateway's regional endpoint. The originPath includes the stage name ('prod').
+      const distribution = new cloudfront.Distribution(this, 'ApiDistribution', {
+        domainNames: ['pokemonshowdownuserstats.com'],
+        certificate: certificate,
+        defaultBehavior: {
+          origin: new origins.HttpOrigin(
+            `${userStatsApi.apiId}.execute-api.${this.region}.amazonaws.com`,
+            {
+              originPath: `/${userStatsApiStage.stageName}`,
+              protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+            }
+          ),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cachePolicy,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
         },
-        subscribers: [{
-          subscriptionType: 'EMAIL',
-          address: 'patricknbruce@gmail.com'
-        }]
-      }]
-    });
+      });
 
-    new cdk.CfnOutput(this, 'UserStatsApiUrl', {
-      value: userStatsApi.apiEndpoint,
-      description: 'The endpoint URL of the UserStatsAp HTTP API',
-    });
+    // const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+    //   domainName: 'pokemonshowdownuserstats.com',
+    // });
+
+    // // Create an alias record in Route 53 to point your domain to the CloudFront distribution
+    // new route53.ARecord(this, 'AliasRecord', {
+    //   zone: hostedZone,
+    //   recordName: 'pokemonshowdownuserstats.com',
+    //   target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
+    // });
+
+    // new budgets.CfnBudget(this, 'FreeTierBudget', {
+    //   budget: {
+    //     budgetType: 'COST',
+    //     timeUnit: 'MONTHLY',
+    //     budgetLimit: {
+    //       amount: 1,
+    //       unit: 'USD'
+    //     }
+    //   },
+    //   notificationsWithSubscribers: [{
+    //     notification: {
+    //       comparisonOperator: 'GREATER_THAN',
+    //       threshold: 0.01,
+    //       notificationType: 'ACTUAL'
+    //     },
+    //     subscribers: [{
+    //       subscriptionType: 'EMAIL',
+    //       address: 'patricknbruce@gmail.com'
+    //     }]
+    //   }]
+    // });
+
+    // new cdk.CfnOutput(this, 'UserStatsApiUrl', {
+    //   value: userStatsApi.apiEndpoint,
+    //   description: 'The endpoint URL of the UserStatsAp HTTP API',
+    // });
   }
 }
