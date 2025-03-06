@@ -1,4 +1,4 @@
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
+import { Line } from "recharts"
 
 export function line() {
     return (

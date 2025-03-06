@@ -15,7 +15,7 @@ export interface UserStats {
     formats: Formats;
 }
 
-const API_BASE_URL = "https://jv5tw21pea.execute-api.us-west-2.amazonaws.com";
+const API_BASE_URL = "https://pokemonshowdownuserstats.com";
 
 export const getUserStats = async (username: string): Promise<UserStats> => {
     const uri = `${API_BASE_URL}/user-stats/${username}`;
