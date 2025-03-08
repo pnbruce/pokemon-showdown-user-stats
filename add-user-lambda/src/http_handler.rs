@@ -247,7 +247,7 @@ pub(crate) async fn function_handler(
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
-        .body(format!("username: {username}, id: {id}, User: {user_string}").into())
+        .body(user_string.into())
         .map_err(Box::new)?;
     Ok(resp)
 }

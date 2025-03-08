@@ -10,7 +10,7 @@ async fn main() -> Result<(), Error> {
     tracing::init_default_subscriber();
 
     let cors_layer = CorsLayer::new()
-        .allow_methods(vec![Method::GET, Method::POST])
+        .allow_methods(vec![Method::PUT])
         .allow_origin(Any);
 
         let config = aws_config::defaults(BehaviorVersion::latest()).load().await;

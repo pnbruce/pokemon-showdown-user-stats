@@ -11,7 +11,7 @@ async fn main() -> Result<(), Error> {
 
     // Define a layer to inject CORS headers
     let cors_layer = CorsLayer::new()
-        .allow_methods(vec![Method::GET, Method::POST])
+        .allow_methods(vec![Method::GET])
         .allow_origin(Any);
 
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;

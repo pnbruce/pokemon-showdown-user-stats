@@ -28,8 +28,8 @@ export const getUserStats = async (username: string): Promise<UserStats> => {
         }
         return response.data;
     } catch (error) {
-        console.error(`Error fetching user stats: ${uri}`, error);
-        throw error;
+        console.error(`Error fetching user stats, adding user`, error);
+        return addUser(username);
     }
 };
 
