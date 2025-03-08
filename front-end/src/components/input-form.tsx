@@ -19,7 +19,7 @@ const formSchema = z.object({
     username: z.string(),
 })
 
-export function ProfileForm({ setUserName, setUserStats}: {
+export function ProfileForm({ setUserName, setUserStats }: {
     setUserName: (username: string) => void,
     setUserStats: (data: UserStats | null) => void
 }) {
@@ -31,13 +31,13 @@ export function ProfileForm({ setUserName, setUserStats}: {
     })
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        setUserName(values.username);
         try {
             const userStats = await getUserStats(values.username);
             console.log(userStats);
             setUserStats(userStats);
+            setUserName(values.username);
         } catch (error) {
-            setUserStats(null);
+            console.error("Error fetching user stats:", error);
         }
     }
 
@@ -50,7 +50,7 @@ export function ProfileForm({ setUserName, setUserStats}: {
                     render={({ field }) => (
                         <FormItem>
                             <FormControl>
-                                <Input placeholder="Showdown username..." {...field} />
+                                <Input placeholder="Enter Username" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

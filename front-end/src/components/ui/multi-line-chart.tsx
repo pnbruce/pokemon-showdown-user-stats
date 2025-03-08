@@ -14,14 +14,12 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const randomsRatings = (data: UserStats | null) => {
+const randomsRatings = (data: Rating[]) => {
     if (data === null) {
         return [];
     }
 
-    const randomsRatings: Rating[] = data?.formats.gen9randombattle || [];
-
-    const entries = randomsRatings.map((rating: Rating) => {
+    const entries = data.map((rating: Rating) => {
         var timestamp = rating.time;
         var date = new Date(timestamp * 1000);
 
@@ -42,6 +40,7 @@ const randomsRatings = (data: UserStats | null) => {
     return entries;
 };
 
+
 const chartConfig = {
     bhahn: {
         label: "bhahn",
@@ -53,21 +52,22 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username, data }: {
+export const MultiLineChart = ({ username, data, format }: {
     username: string,
     data: UserStats | null
+    format: string
 }) => {
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{username} Elo</CardTitle>
+                <CardTitle>{username} {format} Elo</CardTitle>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
                     <LineChart
                         accessibilityLayer
-                        data={randomsRatings(data)}
+                        data={randomsRatings(data?.formats[format] || [])}
                         margin={{
                             left: 12,
                             right: 12,

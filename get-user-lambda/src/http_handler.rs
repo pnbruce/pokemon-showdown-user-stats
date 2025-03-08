@@ -28,6 +28,14 @@ pub(crate) async fn function_handler(
 
     let id = to_id(username);
 
+    if id.len() <= 0 && id.len() < 19 {
+        return Ok(Response::builder()
+            .status(400)
+            .header("content-type", "text/html")
+            .body("invalid username".into())
+            .map_err(Box::new)?);
+    }
+
     let user_stats_table = match env::var("USER_STATS_TABLE") {
         Ok(table) => table,
         Err(_) => {
