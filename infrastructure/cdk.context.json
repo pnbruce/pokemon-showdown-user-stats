@@ -12,5 +12,9 @@
   "hosted-zone:account=147997160234:domainName=pokemonshowdownuserstats.com:region=us-east-1": {
     "Id": "/hostedzone/Z00757991YNQV4VSRCMIA",
     "Name": "pokemonshowdownuserstats.com."
+  },
+  "hosted-zone:account=147997160234:domainName=pokemonshowdownuserstats.com:region=us-west-2": {
+    "Id": "/hostedzone/Z00757991YNQV4VSRCMIA",
+    "Name": "pokemonshowdownuserstats.com."
   }
 }
