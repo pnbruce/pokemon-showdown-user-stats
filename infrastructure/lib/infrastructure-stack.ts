@@ -12,6 +12,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from "path";
 
@@ -144,6 +146,16 @@ export class InfrastructureStack extends cdk.Stack {
       integration: getUserLambdaIntegration,
     });
 
+    const websiteBucket = new s3.Bucket(this, 'WebsiteBucket');
+
+    new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '..', '..', 'front-end/dist'))],
+      destinationBucket: websiteBucket,
+    });
+
+    const oai = new cloudfront.OriginAccessIdentity(this, 'OAI');
+    websiteBucket.grantRead(oai);
+
     const certificate = certificatemanager.Certificate.fromCertificateArn(
       this,
       'SiteCertificate',
@@ -161,22 +173,43 @@ export class InfrastructureStack extends cdk.Stack {
     });
 
     const distribution = new cloudfront.Distribution(this, 'ApiDistribution', {
-      domainNames: ['pokemonshowdownuserstats.com'],
+      domainNames: ['pokemonshowdownuserstats.com', 'www.pokemonshowdownuserstats.com'],
       certificate: certificate,
       defaultBehavior: {
-        origin: new origins.HttpOrigin(
-          `${userStatsApi.apiId}.execute-api.${this.region}.amazonaws.com`,
-          {
-            originPath: `/${userStatsApiStage.stageName}`,
-            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
-          }
-        ),
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        cachePolicy: cachePolicy,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
       },
+      additionalBehaviors: {
+        '/user-stats/*': {
+          origin: new origins.HttpOrigin(
+            `${userStatsApi.apiId}.execute-api.${this.region}.amazonaws.com`,
+            {
+              originPath: `/${userStatsApiStage.stageName}`,
+              protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+            }
+          ),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cachePolicy,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
+      },
+      errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.seconds(0),
+        },
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.seconds(0),
+        },
+      ],
     });
-
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
       domainName: 'pokemonshowdownuserstats.com',
@@ -185,6 +218,12 @@ export class InfrastructureStack extends cdk.Stack {
     new route53.ARecord(this, 'AliasRecord', {
       zone: hostedZone,
       recordName: 'pokemonshowdownuserstats.com',
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
+    });
+
+    new route53.ARecord(this, 'WwwAliasRecord', {
+      zone: hostedZone,
+      recordName: 'www.pokemonshowdownuserstats.com',
       target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
     });
 
