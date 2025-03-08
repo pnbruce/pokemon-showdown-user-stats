@@ -33,7 +33,7 @@ export const getUserStats = async (username: string): Promise<UserStats> => {
     }
 };
 
-export const updateUserStats = async (username: string): Promise<UserStats> => {
+export const addUser = async (username: string): Promise<UserStats> => {
     try {
         const response = await axios.put<UserStats>(`${API_BASE_URL}/user-stats/${username}`);
         return response.data;

@@ -24,17 +24,40 @@ function App() {
     }
   }, [useDefault]);
 
+  const [width, setWidth] = useState<number>(window.innerWidth);
+
+  function handleWindowSizeChange() {
+    setWidth(window.innerWidth);
+  }
+
+  useEffect(() => {
+    window.addEventListener('resize', handleWindowSizeChange);
+    return () => {
+      window.removeEventListener('resize', handleWindowSizeChange);
+    }
+  }, []);
+
+  const isMobile = width <= 768;
+
   return (
     <div className="App">
-      <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
-
-        <div className="App-chart">
-          <MultiLineChart username={username} data={userStats} format={format} />
-        </div>
-        <div className="App-form">
-          <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
-        </div>
-      </div>
+      {
+        !(isMobile) ?
+          <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
+            <div className="App-chart">
+              <MultiLineChart username={username} data={userStats} format={format} />
+            </div>
+            <div className="App-form">
+              <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
+            </div>
+          </div> :
+          <div className="App-chart">
+            <MultiLineChart username={username} data={userStats} format={format} />
+            <div className="App-form">
+              <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
+            </div>
+          </div>
+      }
     </div>
   );
 }
