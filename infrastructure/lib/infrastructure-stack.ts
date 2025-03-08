@@ -148,11 +148,6 @@ export class InfrastructureStack extends cdk.Stack {
 
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket');
 
-    new s3deploy.BucketDeployment(this, 'DeployWebsite', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '..', '..', 'front-end/dist'))],
-      destinationBucket: websiteBucket,
-    });
-
     const oai = new cloudfront.OriginAccessIdentity(this, 'OAI');
     websiteBucket.grantRead(oai);
 
@@ -196,7 +191,7 @@ export class InfrastructureStack extends cdk.Stack {
         },
       },
       errorResponses: [
-        {
+{
           httpStatus: 403,
           responseHttpStatus: 200,
           responsePagePath: '/index.html',
@@ -209,6 +204,13 @@ export class InfrastructureStack extends cdk.Stack {
           ttl: cdk.Duration.seconds(0),
         },
       ],
+    });
+
+    new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '..', '..', 'front-end/dist'))],
+      destinationBucket: websiteBucket,
+      distribution,
+      distributionPaths: ['/*'],
     });
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
