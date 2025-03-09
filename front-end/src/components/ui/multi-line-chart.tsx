@@ -1,5 +1,5 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { UserStats, Rating } from "@/lib/api"
+import { UserStats, Rating, Formats} from "@/lib/api"
 
 import {
     Card,
@@ -14,8 +14,29 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const randomsRatings = (data: Rating[]) => {
-    if (data === null) {
+
+const getStatsForFormat = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
+    try {
+        return userStats.formats[format];
+    } catch (error) {
+        setFormat(format);
+        return getStatsForRandomBattle(userStats);
+    }
+};
+
+const getStatsForRandomBattle = (userStats: UserStats) => {
+    try {
+        return userStats.formats.gen9randombattle;
+    } catch (error) {
+        console.error("Error fetching random battle stats", error);
+        const empty: Rating[] = [];
+        return empty;
+    }
+};
+
+const ratings = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
+    const data = getStatsForFormat(userStats, format, setFormat);
+    if (data.length === 0) {
         return [];
     }
 
@@ -52,10 +73,12 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username, data, format }: {
-    username: string,
-    data: UserStats | null
+export const MultiLineChart = ({ username, data, format, setFormat, isMobile }: {
+    username: string
+    data: UserStats
     format: string
+    setFormat: (username: string) => void
+    isMobile: boolean
 }) => {
 
     return (
@@ -67,14 +90,15 @@ export const MultiLineChart = ({ username, data, format }: {
                 <ChartContainer config={chartConfig}>
                     <LineChart
                         accessibilityLayer
-                        data={randomsRatings(data?.formats[format] || [])}
+                        data={ratings(data, format, setFormat)}
                         margin={{
                             left: 12,
                             right: 12,
                         }}
                     >
                         <CartesianGrid vertical={false} />
-                        <YAxis domain={[1000, 'auto']} />
+                        {isMobile ? <YAxis domain={[1000, 'auto']} hide={true} /> :
+                            <YAxis domain={[1000, 'auto']} />}
                         <XAxis
                             dataKey="time"
                             hide={true}
@@ -87,13 +111,6 @@ export const MultiLineChart = ({ username, data, format }: {
                             dataKey="elo"
                             type="linear"
                             stroke="var(--chart-1)"
-                            strokeWidth={2}
-                            dot={false}
-                        />
-                        <Line
-                            dataKey="the_brucey"
-                            type="monotone"
-                            stroke="var(--chart-2)"
                             strokeWidth={2}
                             dot={false}
                         />

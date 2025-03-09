@@ -5,11 +5,20 @@ import { useState, useEffect } from "react";
 import { UserStats, getUserStats } from "@/lib/api"
 
 
+
 function App() {
+
+  const defaultUserStats: UserStats = {
+    username: "",
+    formats: {
+      gen9randombattle: []
+    },
+    userid: ""
+  }
   const [useDefault, setUseDefault] = useState(true);
   const [username, setUserName] = useState("");
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [format] = useState("gen9randombattle");
+  const [userStats, setUserStats] = useState<UserStats>(defaultUserStats);
+  const [format, setFormat] = useState("gen9randombattle");
 
   useEffect(() => {
     if (useDefault) {
@@ -45,14 +54,14 @@ function App() {
         !(isMobile) ?
           <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} data={userStats} format={format} />
+              <MultiLineChart username={username} data={userStats} format={format} setFormat={setFormat} isMobile={isMobile} />
             </div>
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
           </div> :
           <div className="App-chart">
-            <MultiLineChart username={username} data={userStats} format={format} />
+              <MultiLineChart username={username} data={userStats} format={format} setFormat={setFormat} isMobile={isMobile} />
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>

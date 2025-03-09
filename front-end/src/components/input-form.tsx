@@ -21,7 +21,7 @@ const formSchema = z.object({
 
 export function ProfileForm({ setUserName, setUserStats }: {
     setUserName: (username: string) => void,
-    setUserStats: (data: UserStats | null) => void
+    setUserStats: (data: UserStats) => void
 }) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
