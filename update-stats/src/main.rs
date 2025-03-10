@@ -151,6 +151,14 @@ async fn main() {
                                     continue;
                                 }
                             };
+                            if (new_elo < 1000.0) || (new_elo > 10000.0) {
+                                println!(
+                                    "Elo out of bounds for user ID: {}, elo: {}",
+                                    user_id, new_elo
+                                );
+                                print!("full ps response: {}", ps_response_body);
+                                continue;
+                            }
                             let new_rating = Rating {
                                 time: current_time,
                                 elo: new_elo,

@@ -1,5 +1,5 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { UserStats, Rating, Formats} from "@/lib/api"
+import { UserStats, Rating} from "@/lib/api"
 
 import {
     Card,
