@@ -13,14 +13,15 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart"
+import { log } from "console";
 
 
 const getStatsForFormat = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
     try {
         return userStats.formats[format];
     } catch (error) {
-        setFormat(format);
-        return getStatsForRandomBattle(userStats);
+        console.error("Error fetching stats for format", error);
+        return [];
     }
 };
 
@@ -35,8 +36,10 @@ const getStatsForRandomBattle = (userStats: UserStats) => {
 };
 
 const ratings = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
+    console.log(userStats);
     const data = getStatsForFormat(userStats, format, setFormat);
-    if (data.length === 0) {
+    console.log(data);
+    if (!Array.isArray(data)) {
         return [];
     }
 
