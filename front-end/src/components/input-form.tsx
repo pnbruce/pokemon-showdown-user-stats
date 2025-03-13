@@ -36,6 +36,7 @@ export function ProfileForm({ setUserName, setUserStats }: {
             console.log(userStats);
             setUserStats(userStats);
             setUserName(values.username);
+            localStorage.setItem("username", JSON.stringify(values.username));
         } catch (error) {
             console.error("Error fetching user stats:", error);
         }

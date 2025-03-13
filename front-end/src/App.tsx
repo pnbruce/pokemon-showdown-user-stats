@@ -16,18 +16,29 @@ function App() {
     userid: ""
   }
   const [useDefault, setUseDefault] = useState(true);
-  const [username, setUserName] = useState("");
+
+  const [username, setUserName] = useState(() => {
+    try {
+      console.log("getting username from local storage");
+      const item = localStorage.getItem("username");
+      return item ? JSON.parse(item) : "MichealDerBeste2";
+    } catch (error) {
+      console.warn("Error fetching username from local storage", error);
+      return "MichealDerBeste2";
+    }
+  });
   const [userStats, setUserStats] = useState<UserStats>(defaultUserStats);
   const [format, setFormat] = useState("gen9randombattle");
 
   useEffect(() => {
+
     if (useDefault) {
       const fetchDefaultUser = async () => {
-        const defaultUsername = "MichaelDerBeste2";
-        setUserName(defaultUsername);
-        const stats = await getUserStats(defaultUsername);
+        console.log(`fetching default user: ${username}`);
+        const stats = await getUserStats(username);
         setUserStats(stats);
         setUseDefault(false);
+        localStorage.setItem("useDefault", JSON.stringify(false));
       };
       fetchDefaultUser();
     }
