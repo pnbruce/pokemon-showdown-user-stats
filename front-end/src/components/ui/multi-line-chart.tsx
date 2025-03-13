@@ -1,5 +1,5 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { UserStats, Rating} from "@/lib/api"
+import { UserStats, Rating } from "@/lib/api"
 
 import {
     Card,
@@ -13,10 +13,9 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart"
-import { log } from "console";
 
 
-const getStatsForFormat = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
+const getStatsForFormat = (userStats: UserStats, format: string) => {
     try {
         return userStats.formats[format];
     } catch (error) {
@@ -25,19 +24,9 @@ const getStatsForFormat = (userStats: UserStats, format: string, setFormat: (use
     }
 };
 
-const getStatsForRandomBattle = (userStats: UserStats) => {
-    try {
-        return userStats.formats.gen9randombattle;
-    } catch (error) {
-        console.error("Error fetching random battle stats", error);
-        const empty: Rating[] = [];
-        return empty;
-    }
-};
-
-const ratings = (userStats: UserStats, format: string, setFormat: (username: string) => void) => {
+const ratings = (userStats: UserStats, format: string) => {
     console.log(userStats);
-    const data = getStatsForFormat(userStats, format, setFormat);
+    const data = getStatsForFormat(userStats, format);
     console.log(data);
     if (!Array.isArray(data)) {
         return [];
@@ -76,24 +65,28 @@ const chartConfig = {
     },
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username, data, format, setFormat, isMobile }: {
+export const MultiLineChart = ({ username, data: userStats, format, isMobile }: {
     username: string
     data: UserStats
     format: string
-    setFormat: (username: string) => void
     isMobile: boolean
 }) => {
+    const stats = getStatsForFormat(userStats, format);
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{username} {format} Elo</CardTitle>
+                <CardTitle>{username}</CardTitle>
+                <CardTitle>{format}</CardTitle>
+                <CardTitle>{
+                    stats.length > 0 ? `${Math.round(stats[stats.length - 1].elo)}` : "1000"
+                }</CardTitle>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
                     <LineChart
                         accessibilityLayer
-                        data={ratings(data, format, setFormat)}
+                        data={ratings(userStats, format)}
                         margin={{
                             left: 12,
                             right: 12,

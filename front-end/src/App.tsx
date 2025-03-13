@@ -16,19 +16,19 @@ function App() {
     userid: ""
   }
   const [useDefault, setUseDefault] = useState(true);
-
+  const defaultUsername = "michaelderBeste2";
   const [username, setUserName] = useState(() => {
     try {
       console.log("getting username from local storage");
       const item = localStorage.getItem("username");
-      return item ? JSON.parse(item) : "MichealDerBeste2";
+      return item ? JSON.parse(item) : defaultUsername;
     } catch (error) {
       console.warn("Error fetching username from local storage", error);
-      return "MichealDerBeste2";
+      return defaultUsername;
     }
   });
   const [userStats, setUserStats] = useState<UserStats>(defaultUserStats);
-  const [format, setFormat] = useState("gen9randombattle");
+  const [format] = useState("gen9randombattle");
 
   useEffect(() => {
 
@@ -61,18 +61,21 @@ function App() {
 
   return (
     <div className="App">
+      <div className='App-header'>
+        <h1 className="text-left text-2xl">Pokémon Showdown User Stats</h1>
+      </div>
       {
         !(isMobile) ?
           <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} data={userStats} format={format} setFormat={setFormat} isMobile={isMobile} />
+              <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
             </div>
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
           </div> :
           <div className="App-chart">
-              <MultiLineChart username={username} data={userStats} format={format} setFormat={setFormat} isMobile={isMobile} />
+            <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
