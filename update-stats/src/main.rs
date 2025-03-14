@@ -64,6 +64,8 @@ async fn main() {
                             continue;
                         }
                     };
+
+                    println!("Processing user: {}", user_id);
                     let stats_json_gz = match item.get("stats.json.gz") {
                         Some(val) => val,
                         None => {
@@ -90,6 +92,14 @@ async fn main() {
                             continue;
                         }
                     }
+
+                    let mut user: User = match serde_json::from_str(&stats_json) {
+                        Ok(resp) => resp,
+                        Err(e) => {
+                            println!("Error parsing JSON: {:?}", e);
+                            continue;
+                        }
+                    };
 
                     let ps_response = match reqwest::get(format!(
                         "https://pokemonshowdown.com/users/{user_id}.json"
@@ -131,16 +141,9 @@ async fn main() {
                             }
                         };
 
-                    let mut user: User = match serde_json::from_str(&stats_json) {
-                        Ok(resp) => resp,
-                        Err(e) => {
-                            println!("Error parsing JSON: {:?}", e);
-                            continue;
-                        }
-                    };
-
                     if let Value::Object(map) = ps_user_stats["ratings"].clone() {
                         for (format, rating) in map {
+                            println!("Processing format: {}", format);
                             let new_elo = match rating["elo"].as_f64() {
                                 Some(resp) => resp,
                                 None => {
@@ -151,20 +154,32 @@ async fn main() {
                                     continue;
                                 }
                             };
+
+                            print!("New Elo: {}", new_elo);
                             if (new_elo < 1000.0) || (new_elo > 10000.0) {
                                 println!(
                                     "Elo out of bounds for user ID: {}, elo: {}",
                                     user_id, new_elo
                                 );
-                                print!("full ps response: {}", ps_response_body);
+                                println!("full ps response: {}", ps_response_body);
                                 continue;
                             }
+
                             let new_rating = Rating {
                                 time: current_time,
                                 elo: new_elo,
                             };
+
                             let ratings = user.formats.entry(format).or_insert_with(Vec::new);
+                            println!(
+                                "last rating: {}",
+                                match ratings.last().map(|r| r.elo) {
+                                    Some(resp) => resp,
+                                    None => 696969696969.0,
+                                }
+                            );
                             if ratings.last().map(|r| r.elo) != Some(new_elo) {
+                                println!("Pushing new rating");
                                 ratings.push(new_rating);
                             }
                         }
@@ -237,7 +252,7 @@ async fn main() {
             } else {
                 Duration::new(0, 0)
             };
-            print!("Waiting for {} milis...", wait_time.as_millis());
+            println!("Waiting for {} milis...", wait_time.as_millis());
             tokio::time::sleep(wait_time).await;
         }
         let time_passed = scan_start_time.elapsed();
@@ -246,7 +261,7 @@ async fn main() {
         } else {
             Duration::new(0, 0)
         };
-        print!("Waiting for {} milis...", wait_time.as_millis());
+        println!("Waiting for {} milis...", wait_time.as_millis());
         tokio::time::sleep(wait_time).await;
     }
 }

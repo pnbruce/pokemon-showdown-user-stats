@@ -82,7 +82,7 @@ export class InfrastructureStack extends cdk.Stack {
 
     const updateStatsLogGroup = new logs.LogGroup(this, 'UpdateStatsLogGroup', {
       logGroupName: '/ecs/update-stats',
-      retention: logs.RetentionDays.ONE_WEEK, // Set log retention period
+      retention: logs.RetentionDays.ONE_WEEK,
     });
 
     const updateStatsLogDriver = ecs.LogDriver.awsLogs({
