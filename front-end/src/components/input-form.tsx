@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+import { FormatForm } from "@/components/format-form"
 import { Button } from "@/components/ui/button"
 import {
     Form,
@@ -51,12 +52,13 @@ export function ProfileForm({ setUserName, setUserStats }: {
                     render={({ field }) => (
                         <FormItem>
                             <FormControl>
-                                <Input placeholder="Enter Username" {...field} />
+                                <Input placeholder="Username" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
+                <FormatForm />
                 <Button type="submit">Submit</Button>
             </form>
         </Form>

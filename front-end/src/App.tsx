@@ -1,5 +1,6 @@
 import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
+import { FormatForm } from "@/components/format-form"
 import { ProfileForm } from "@/components/input-form"
 import { useState, useEffect } from "react";
 import { UserStats, getUserStats } from "@/lib/api"
@@ -65,17 +66,17 @@ function App() {
         <h1 className="text-left text-2xl">Pokémon Showdown User Stats</h1>
       </div>
       {
-        !(isMobile) ?
-          <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
-            <div className="App-chart">
-              <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
-            </div>
+        (isMobile) ?
+          <div className="App-chart">
+            <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
           </div> :
-          <div className="App-chart">
-            <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
+          <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
+            <div className="App-chart">
+              <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
+            </div>
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
