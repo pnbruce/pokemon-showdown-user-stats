@@ -27,9 +27,8 @@ export const convertToHumanReadableDates = (ratings: Rating[]) => {
         var day = date.getDate();
         var hours = date.getHours();
         var minutes = date.getMinutes();
-        var seconds = date.getSeconds();
 
-        var dateStr = year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+        var dateStr = year + "-" + month + "-" + day + " " + hours + ":" + minutes;
         return {
             time: dateStr,
             elo: Math.round(rating.elo),
