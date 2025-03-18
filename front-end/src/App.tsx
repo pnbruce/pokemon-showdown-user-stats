@@ -1,11 +1,9 @@
 import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
-import { FormatForm } from "@/components/format-form"
 import { ProfileForm } from "@/components/input-form"
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"
 import { UserStats, getUserStats } from "@/lib/api"
-
-
+import { getRatingsForFormat } from './lib/user-stats-parser'
 
 function App() {
 
@@ -60,6 +58,8 @@ function App() {
 
   const isMobile = width <= 768;
 
+  const ratings = getRatingsForFormat(userStats, format);
+
   return (
     <div className="App">
       <div className='App-header'>
@@ -68,14 +68,14 @@ function App() {
       {
         (isMobile) ?
           <div className="App-chart">
-            <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
+            <MultiLineChart username={username} ratings={ratings} format={format} isMobile={isMobile} />
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
             </div>
           </div> :
           <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} data={userStats} format={format} isMobile={isMobile} />
+              <MultiLineChart username={username} ratings={ratings} format={format} isMobile={isMobile} />
             </div>
             <div className="App-form">
               <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />

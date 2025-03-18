@@ -20,7 +20,6 @@ const API_BASE_URL = "https://pokemonshowdownuserstats.com";
 export const getUserStats = async (username: string): Promise<UserStats> => {
     const uri = `${API_BASE_URL}/user-stats/${username}`;
     try {
-        console.log(`Fetching user stats: ${uri}`);
         const response = await axios.get<UserStats>(uri);
         if (response.status !== 200) {
             throw new Error(`Failed to fetch user stats: ${response.status}, 
