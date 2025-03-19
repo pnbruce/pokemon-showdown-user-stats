@@ -1,43 +1,56 @@
 import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
-import { ProfileForm } from "@/components/input-form"
+import { FormatForm } from './components/username-format-form'
 import { useState, useEffect } from "react"
 import { UserStats, getUserStats } from "@/lib/api"
 import { getRatingsForFormat } from './lib/user-stats-parser'
 
-function App() {
 
-  const defaultUserStats: UserStats = {
-    username: "",
-    formats: {
-      gen9randombattle: []
-    },
-    userid: ""
+const defaultUsername = (fallbackDefaultUsername: string) => {
+  try {
+    const item = localStorage.getItem("username");
+    return item ? JSON.parse(item) : fallbackDefaultUsername;
+  } catch (error) {
+    return fallbackDefaultUsername;
   }
+}
+
+const fallbackDefaultFormat = (userStats: UserStats, firstChoice: string) => {
+  if (Object.keys(userStats.formats).length === 0) {
+    return "";
+  }
+  if (Object.keys(userStats.formats).includes(firstChoice)) {
+    return firstChoice;
+  }
+  return Object.keys(userStats.formats)[0];
+}
+
+const defaultFormat = (fallbackDefaultFormat: string) => {
+  try {
+    const item = localStorage.getItem("format");
+    return item ? JSON.parse(item) : fallbackDefaultFormat;
+  } catch (error) {
+    return fallbackDefaultFormat;
+  }
+}
+
+function App() {
   const [useDefault, setUseDefault] = useState(true);
-  const defaultUsername = "michaelderBeste2";
-  const [username, setUserName] = useState(() => {
-    try {
-      console.log("getting username from local storage");
-      const item = localStorage.getItem("username");
-      return item ? JSON.parse(item) : defaultUsername;
-    } catch (error) {
-      console.warn("Error fetching username from local storage", error);
-      return defaultUsername;
-    }
-  });
-  const [userStats, setUserStats] = useState<UserStats>(defaultUserStats);
-  const [format] = useState("gen9randombattle");
+  const [userStats, setUserStats] = useState<UserStats>();
+  const [format, setFormat] = useState<string>();
 
   useEffect(() => {
-
     if (useDefault) {
       const fetchDefaultUser = async () => {
-        console.log(`fetching default user: ${username}`);
+        const fallbackDefaultUsername = "MichaelderBeste2";
+        const username = defaultUsername(fallbackDefaultUsername);
         const stats = await getUserStats(username);
         setUserStats(stats);
+        const firstChoiceFormat = "gen9randombattle";
+        const fallbackDefault = fallbackDefaultFormat(stats, firstChoiceFormat);
+        const format = defaultFormat(fallbackDefault);
+        setFormat(format);
         setUseDefault(false);
-        localStorage.setItem("useDefault", JSON.stringify(false));
       };
       fetchDefaultUser();
     }
@@ -58,7 +71,17 @@ function App() {
 
   const isMobile = width <= 768;
 
-  const ratings = getRatingsForFormat(userStats, format);
+  const username = (userStats === undefined) ? "" : userStats.username;
+  const currentFormat = (format === undefined) ? "" : format;
+  const ratings = (userStats === undefined) || (format === undefined) ? [] : getRatingsForFormat(userStats, format);
+
+  // TODO: derive list of formats from userstats
+  const formats = (userStats === undefined) ? [] : Object.keys(userStats.formats).sort((a, b) => {
+    return a.localeCompare(b);
+  })
+
+  // TODO: make sure that the graph and UI components do not fall off the screen. Enforce some max
+  // height. 
 
   return (
     <div className="App">
@@ -68,17 +91,17 @@ function App() {
       {
         (isMobile) ?
           <div className="App-chart">
-            <MultiLineChart username={username} ratings={ratings} format={format} isMobile={isMobile} />
+            <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
             <div className="App-form">
-              <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
+              <FormatForm setFormat={setFormat} setUserStats={setUserStats} formats={formats} />
             </div>
           </div> :
-          <div style={{ display: "grid", gridTemplateColumns: "5fr 1fr", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "4fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} ratings={ratings} format={format} isMobile={isMobile} />
+              <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
             </div>
             <div className="App-form">
-              <ProfileForm setUserName={setUserName} setUserStats={setUserStats} />
+              <FormatForm setFormat={setFormat} setUserStats={setUserStats} formats={formats} />
             </div>
           </div>
       }
