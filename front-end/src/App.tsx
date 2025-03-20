@@ -1,38 +1,11 @@
 import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
-import { FormatForm } from './components/username-format-form'
 import { useState, useEffect } from "react"
-import { UserStats, getUserStats } from "@/lib/api"
+import { UserStats } from "@/lib/api"
 import { getRatingsForFormat } from './lib/user-stats-parser'
-
-
-const defaultUsername = (fallbackDefaultUsername: string) => {
-  try {
-    const item = localStorage.getItem("username");
-    return item ? JSON.parse(item) : fallbackDefaultUsername;
-  } catch (error) {
-    return fallbackDefaultUsername;
-  }
-}
-
-const fallbackDefaultFormat = (userStats: UserStats, firstChoice: string) => {
-  if (Object.keys(userStats.formats).length === 0) {
-    return "";
-  }
-  if (Object.keys(userStats.formats).includes(firstChoice)) {
-    return firstChoice;
-  }
-  return Object.keys(userStats.formats)[0];
-}
-
-const defaultFormat = (fallbackDefaultFormat: string) => {
-  try {
-    const item = localStorage.getItem("format");
-    return item ? JSON.parse(item) : fallbackDefaultFormat;
-  } catch (error) {
-    return fallbackDefaultFormat;
-  }
-}
+import { tryGetUsernameFromStorage, tryGetFormatFromStorage, updateUserStats } from './lib/defaults'
+import { FormatForm } from './components/format-form'
+import { UsernameForm } from './components/username-form'
 
 function App() {
   const [useDefault, setUseDefault] = useState(true);
@@ -43,13 +16,10 @@ function App() {
     if (useDefault) {
       const fetchDefaultUser = async () => {
         const fallbackDefaultUsername = "MichaelderBeste2";
-        const username = defaultUsername(fallbackDefaultUsername);
-        const stats = await getUserStats(username);
-        setUserStats(stats);
-        const firstChoiceFormat = "gen9randombattle";
-        const fallbackDefault = fallbackDefaultFormat(stats, firstChoiceFormat);
-        const format = defaultFormat(fallbackDefault);
-        setFormat(format);
+        const username = tryGetUsernameFromStorage(fallbackDefaultUsername)
+        const fallbackDefaultFormat = "gen9randombattle"
+        const defaultfrmt = tryGetFormatFromStorage(fallbackDefaultFormat)
+        await updateUserStats(username, defaultfrmt, fallbackDefaultFormat, setUserStats, setFormat)
         setUseDefault(false);
       };
       fetchDefaultUser();
@@ -74,11 +44,11 @@ function App() {
   const username = (userStats === undefined) ? "" : userStats.username;
   const currentFormat = (format === undefined) ? "" : format;
   const ratings = (userStats === undefined) || (format === undefined) ? [] : getRatingsForFormat(userStats, format);
-
-  // TODO: derive list of formats from userstats
   const formats = (userStats === undefined) ? [] : Object.keys(userStats.formats).sort((a, b) => {
     return a.localeCompare(b);
   })
+
+  // TODO: derive list of formats from userstats
 
   // TODO: make sure that the graph and UI components do not fall off the screen. Enforce some max
   // height. 
@@ -93,7 +63,8 @@ function App() {
           <div className="App-chart">
             <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
             <div className="App-form">
-              <FormatForm setFormat={setFormat} setUserStats={setUserStats} formats={formats} />
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>
+              <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div> :
           <div style={{ display: "grid", gridTemplateColumns: "4fr 1fr", gap: "10px" }}>
@@ -101,7 +72,8 @@ function App() {
               <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
             </div>
             <div className="App-form">
-              <FormatForm setFormat={setFormat} setUserStats={setUserStats} formats={formats} />
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>
+              <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div>
       }
@@ -110,3 +82,4 @@ function App() {
 }
 
 export default App
+
