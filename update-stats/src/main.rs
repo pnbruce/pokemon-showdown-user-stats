@@ -21,15 +21,16 @@ async fn main() {
     let user_stats_table = match env::var(user_stats_table_env) {
         Ok(val) => val,
         Err(_) => {
-            println!("{} is not set. Exiting...", user_stats_table_env);
+            println!("ERROR: {} is not set. Exiting...", user_stats_table_env);
             return;
         }
     };
 
     loop {
-        let scan_start_time = Instant::now();
         let mut exclusive_start_key = None;
+        let scan_start_time = Instant::now();
         loop {
+            let scan_page_start_time = Instant::now();
             let user_stats_table_scan_resp = match ddb
                 .scan()
                 .set_exclusive_start_key(exclusive_start_key.clone())
@@ -40,27 +41,25 @@ async fn main() {
             {
                 Ok(resp) => resp,
                 Err(e) => {
-                    println!("Error scanning table: {:?}", e);
+                    println!("ERROR: error scanning table: {:?}", e);
                     thread::sleep(Duration::from_secs(3600));
                     continue;
                 }
             };
-
-            let scan_page_start_time = Instant::now();
 
             if let Some(items) = user_stats_table_scan_resp.items {
                 for item in items {
                     let user_id = match item.get("userId") {
                         Some(val) => val,
                         None => {
-                            println!("Item {:?} is missing 'userId' key", item);
+                            println!("ERROR: Item {:?} is missing 'userId' key", item);
                             continue;
                         }
                     };
                     let user_id = match user_id.as_s() {
                         Ok(val) => val,
                         Err(_) => {
-                            println!("Item {:?} 'userId' key is not a string", item);
+                            println!("ERROR: Item {:?} 'userId' key is not a string", item);
                             continue;
                         }
                     };
@@ -143,7 +142,6 @@ async fn main() {
 
                     if let Value::Object(map) = ps_user_stats["ratings"].clone() {
                         for (format, rating) in map {
-                            println!("Processing format: {}", format);
                             let new_elo = match rating["elo"].as_f64() {
                                 Some(resp) => resp,
                                 None => {
@@ -155,7 +153,6 @@ async fn main() {
                                 }
                             };
 
-                            print!("New Elo: {}", new_elo);
                             if (new_elo < 1000.0) || (new_elo > 10000.0) {
                                 println!(
                                     "Elo out of bounds for user ID: {}, elo: {}",
@@ -171,13 +168,6 @@ async fn main() {
                             };
 
                             let ratings = user.formats.entry(format).or_insert_with(Vec::new);
-                            println!(
-                                "last rating: {}",
-                                match ratings.last().map(|r| r.elo) {
-                                    Some(resp) => resp,
-                                    None => 696969696969.0,
-                                }
-                            );
                             if ratings.last().map(|r| r.elo) != Some(new_elo) {
                                 println!("Pushing new rating");
                                 ratings.push(new_rating);
@@ -252,7 +242,9 @@ async fn main() {
             } else {
                 Duration::new(0, 0)
             };
-            println!("Waiting for {} milis...", wait_time.as_millis());
+
+            println!("page scan time: {} milis", time_passed.as_millis());
+            println!("Scan page once per second; Waiting for {} milis...", wait_time.as_millis());
             tokio::time::sleep(wait_time).await;
         }
         let time_passed = scan_start_time.elapsed();
@@ -261,7 +253,8 @@ async fn main() {
         } else {
             Duration::new(0, 0)
         };
-        println!("Waiting for {} milis...", wait_time.as_millis());
+        println!("scan time: {} milis", time_passed.as_millis());
+        println!("Scan table once per min. Waiting for {} milis...", wait_time.as_millis());
         tokio::time::sleep(wait_time).await;
     }
 }

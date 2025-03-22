@@ -1,5 +1,4 @@
-import { UserStats, Formats, getUserStats } from "@/lib/api"
-import { Dispatch, SetStateAction } from "react";
+import { UserStats, Formats, getUserStats } from "@/lib/api";
 
 export const tryGetUsernameFromStorage = (fallbackDefaultUsername: string) => {
   return getFromStorage(fallbackDefaultUsername, "username");
