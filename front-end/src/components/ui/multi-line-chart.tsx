@@ -20,10 +20,11 @@ import {
 const chartConfig = {
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username, ratings, format, isMobile }: {
+export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile }: {
     username: string
     ratings: Rating[]
     format: string
+    lastRating: string
     isMobile: boolean
 }) => {
 
@@ -42,7 +43,7 @@ export const MultiLineChart = ({ username, ratings, format, isMobile }: {
             <CardHeader>
                 <CardTitle>{username}</CardTitle>
                 <CardTitle>{format}</CardTitle>
-                <CardTitle>{getLatestRating(ratings)}</CardTitle>
+                <CardTitle>{lastRating}</CardTitle>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>

@@ -2,7 +2,7 @@ import './App.css'
 import { MultiLineChart } from "@/components/ui/multi-line-chart"
 import { useState, useEffect } from "react"
 import { UserStats } from "@/lib/api"
-import { getRatingsForFormat } from './lib/user-stats-parser'
+import { getRatingsForFormat, getLatestRating} from './lib/user-stats-parser'
 import { tryGetUsernameFromStorage, tryGetFormatFromStorage, updateUserStats } from './lib/defaults'
 import { FormatForm } from './components/format-form'
 import { UsernameForm } from './components/username-form'
@@ -53,6 +53,8 @@ function App() {
   // TODO: make sure that the graph and UI components do not fall off the screen. Enforce some max
   // height. 
 
+  const lastRating = getLatestRating(ratings);
+
   return (
     <div className="App">
       <div className='App-header'>
@@ -61,7 +63,7 @@ function App() {
       {
         (isMobile) ?
           <div className="App-chart">
-            <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
+            <MultiLineChart username={username} ratings={ratings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             <div className="App-form">
               <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
@@ -69,7 +71,7 @@ function App() {
           </div> :
           <div style={{ display: "grid", gridTemplateColumns: "4fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} ratings={ratings} format={currentFormat} isMobile={isMobile} />
+              <MultiLineChart username={username} ratings={ratings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             </div>
             <div className="App-form">
               <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>

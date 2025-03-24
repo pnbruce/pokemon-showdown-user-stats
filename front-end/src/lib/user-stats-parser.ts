@@ -10,7 +10,7 @@ export const getRatingsForFormat = (userStats: UserStats, format: string) => {
 };
 
 export const getLatestRating = (ratings: Rating[]) => {
-    return ratings === undefined || ratings.length < 1 ? "1000" : `${Math.round(ratings[ratings.length - 1].elo)}`
+    return ratings.length < 1 ? "1000" : `${Math.round(ratings[ratings.length - 1].elo)}`
 }
 
 export const convertToHumanReadableDates = (ratings: Rating[]) => {
