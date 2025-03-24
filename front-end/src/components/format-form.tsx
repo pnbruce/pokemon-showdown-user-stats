@@ -64,7 +64,7 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
                                         <SelectValue placeholder={currentFormat} />
                                     </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                                <SelectContent className="bg-white">
                                     {selectItems}
                                 </SelectContent>
                             </Select>
