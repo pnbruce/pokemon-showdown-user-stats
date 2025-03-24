@@ -40,6 +40,23 @@
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
   --radius: 0.6rem;
+
+  button {
+    border: 1px solid transparent hsl(0, 0%, 0%);
+    padding: 0.6em .8em;
+    font-size: 1em;
+    font-family: inherit;
+    background-color: hsl(0 0% 100%);
+    cursor: pointer;
+    transition: border-color 0.25s;
+  }
+  button:hover {
+    background-color: hsl(0 0% 98%);
+  }
+  button:focus,
+  button:focus-visible {
+    outline: 0px auto -webkit-focus-ring-color;
+  }
 }
 
 @layer base {

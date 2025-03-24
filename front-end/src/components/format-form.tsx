@@ -60,11 +60,11 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
                         <FormItem>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full truncate">
                                         <SelectValue placeholder={currentFormat} />
                                     </SelectTrigger>
                                 </FormControl>
-                                <SelectContent className="bg-white">
+                                <SelectContent className="bg-white w-full truncate">
                                     {selectItems}
                                 </SelectContent>
                             </Select>

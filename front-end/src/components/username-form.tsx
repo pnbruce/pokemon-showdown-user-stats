@@ -53,7 +53,7 @@ export function UsernameForm({ setUserStats, setFormat }: {
                         </FormItem>
                     )}
                 />
-                <Button type="submit">Submit</Button>
+                <Button type="submit" className="mb-8">Submit</Button>
             </form>
         </Form>
     )
