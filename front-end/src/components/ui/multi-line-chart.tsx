@@ -1,6 +1,6 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { Rating } from "@/lib/api"
-import { convertToHumanReadableDates, getLatestRating } from "@/lib/user-stats-parser"
+import { convertToHumanReadableDates } from "@/lib/user-stats-parser"
 
 import {
     Card,

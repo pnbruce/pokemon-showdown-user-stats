@@ -20,16 +20,20 @@ const getFromStorage = (defualtValue: string, key: string) => {
 export async function updateUserStats(username: string, defaultFormat: string, fallbackFormat: string,
   setUserStats: (data: UserStats) => void,
   setFormat: (format: string | undefined) => void) {
-
-  const stats = await getUserStats(username);
-  setUserStats(stats);
-  localStorage.setItem("username", JSON.stringify(username));
-  if (!(Object.keys(stats.formats).length === 0)) {
-    const format = getFormat(stats.formats, defaultFormat, fallbackFormat);
-    setFormat(format);
-    localStorage.setItem("format", JSON.stringify(format));
-  } else {
-    setFormat(undefined);
+  try {
+    const stats = await getUserStats(username);
+    setUserStats(stats);
+    localStorage.setItem("username", JSON.stringify(username));
+    if (!(Object.keys(stats.formats).length === 0)) {
+      const format = getFormat(stats.formats, defaultFormat, fallbackFormat);
+      setFormat(format);
+      localStorage.setItem("format", JSON.stringify(format));
+    } else {
+      setFormat(undefined);
+    }
+  } catch (error) {
+    console.error("error getting user stats:", error);
+    return;
   }
 }
 

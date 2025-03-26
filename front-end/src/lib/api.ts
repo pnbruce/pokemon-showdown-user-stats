@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 export interface Rating {
     time: number;
@@ -23,12 +23,16 @@ export const getUserStats = async (username: string): Promise<UserStats> => {
         const response = await axios.get<UserStats>(uri);
         if (response.status !== 200) {
             throw new Error(`Failed to fetch user stats: ${response.status}, 
-            ${response.statusText}`);
+                ${response.statusText}`);
         }
         return response.data;
     } catch (error) {
-        console.error(`Error fetching user stats, adding user`, error);
-        return addUser(username);
+        if (error instanceof AxiosError && error.response?.status === 404) {
+            console.warn(`User not in database: ${username} attempting to add user`);
+            return addUser(username);
+        }
+        console.error("Error fetching user stats:", error);
+        throw error;
     }
 };
 

@@ -10,18 +10,18 @@ async fn main() -> Result<(), Error> {
     tracing::init_default_subscriber();
 
     let cors_layer = CorsLayer::new()
-        .allow_methods(vec![Method::PUT])
+        .allow_methods(vec![Method::PUT, Method::OPTIONS])
         .allow_origin(Any);
 
-        let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-        let ddb = Client::new(&config);
-        let shared_ddb = &ddb;
-        let closure = move |event: Request| async move { function_handler(&shared_ddb, event).await };
-        let service_fn = lambda_http::service_fn(closure);
-        let handler = ServiceBuilder::new()
-            // Add the CORS layer to the service
-            .layer(cors_layer)
-            .service(service_fn);
+    let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+    let ddb = Client::new(&config);
+    let shared_ddb = &ddb;
+    let closure = move |event: Request| async move { function_handler(&shared_ddb, event).await };
+    let service_fn = lambda_http::service_fn(closure);
+    let handler = ServiceBuilder::new()
+        // Add the CORS layer to the service
+        .layer(cors_layer)
+        .service(service_fn);
 
     lambda_http::run(handler).await
 }
