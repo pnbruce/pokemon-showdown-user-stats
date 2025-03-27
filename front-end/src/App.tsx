@@ -16,9 +16,9 @@ function App() {
     if (useDefault) {
       const fetchDefaultUser = async () => {
         const fallbackDefaultUsername = "MichaelderBeste2";
-        const username = tryGetUsernameFromStorage(fallbackDefaultUsername)
+        const username = tryGetUsernameFromStorage(localStorage, fallbackDefaultUsername)
         const fallbackDefaultFormat = "gen9randombattle"
-        const defaultfrmt = tryGetFormatFromStorage(fallbackDefaultFormat)
+        const defaultfrmt = tryGetFormatFromStorage(localStorage, fallbackDefaultFormat)
         await updateUserStats(username, defaultfrmt, fallbackDefaultFormat, setUserStats, setFormat)
         setUseDefault(false);
       };

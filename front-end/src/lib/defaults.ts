@@ -1,21 +1,21 @@
 import { UserStats, Formats, getUserStats } from "@/lib/api";
 
-export const tryGetUsernameFromStorage = (fallbackDefaultUsername: string) => {
-  return getFromStorage(fallbackDefaultUsername, "username");
-}
+export const tryGetUsernameFromStorage = (storage: Storage, fallbackDefaultUsername: string) => {
+  return getFromStorage(storage, fallbackDefaultUsername, "username");
+};
 
-export const tryGetFormatFromStorage = (fallbackDefaultFormat: string) => {
-  return getFromStorage(fallbackDefaultFormat, "format");
-}
+export const tryGetFormatFromStorage = (storage: Storage, fallbackDefaultFormat: string) => {
+  return getFromStorage(storage, fallbackDefaultFormat, "format");
+};
 
-const getFromStorage = (defualtValue: string, key: string) => {
+const getFromStorage = (storage: Storage, defaultValue: string, key: string) => {
   try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defualtValue;
+    const item = storage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
-    return defualtValue;
+    return defaultValue;
   }
-}
+};
 
 export async function updateUserStats(username: string, defaultFormat: string, fallbackFormat: string,
   setUserStats: (data: UserStats) => void,
