@@ -1,6 +1,4 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { Rating } from "@/lib/api"
-import { convertToHumanReadableDates } from "@/lib/user-stats-parser"
 
 import {
     Card,
@@ -22,7 +20,10 @@ const chartConfig = {
 
 export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile }: {
     username: string
-    ratings: Rating[]
+    ratings: {
+        time: string;
+        elo: number;
+    }[]
     format: string
     lastRating: string
     isMobile: boolean
@@ -36,8 +37,6 @@ export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile
     // on selection of one of the buttons, update the state.
     // the button for the corresponding domain will become colored differently after being clicked
     // based on the domain selected.
-
-    const human_readable_data = convertToHumanReadableDates(ratings);
     return (
         <Card>
             <CardHeader>
@@ -49,7 +48,7 @@ export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile
                 <ChartContainer config={chartConfig}>
                     <LineChart
                         accessibilityLayer
-                        data={human_readable_data}
+                        data={ratings}
                         margin={{
                             left: 12,
                             right: 12,

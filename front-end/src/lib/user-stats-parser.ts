@@ -1,24 +1,18 @@
 import { UserStats, Rating } from "@/lib/api"
 
-export const getRatingsForFormat = (userStats: UserStats, format: string) => {
-    try {
-        return userStats.formats[format];
-    } catch (error) {
-        console.error("Error fetching stats for format", error);
+export const getRatingsForFormat = (userStats: UserStats | undefined, format: string | undefined) => {
+    if (userStats === undefined || format === undefined || !(format in userStats.formats)) {
         return [];
     }
+    return userStats.formats[format];
 };
 
-export const getLatestRating = (ratings: Rating[]) => {
-    return ratings.length < 1 ? "1000" : `${Math.round(ratings[ratings.length - 1].elo)}`
-}
-
-export const convertToHumanReadableDates = (ratings: Rating[]) => {
+export const formatRatings = (ratings: Rating[]) => {
     if (!Array.isArray(ratings)) {
         return [];
     }
 
-    const entries = ratings.map((rating) => {
+    const formattedRatings = ratings.map((rating) => {
         const date = new Date(rating.time * 1000);
         const dateStr = new Intl.DateTimeFormat('en-US', {
             year: 'numeric',
@@ -28,12 +22,31 @@ export const convertToHumanReadableDates = (ratings: Rating[]) => {
             minute: '2-digit',
             hour12: true // 12-hour format
         }).format(date);
-    
+
         return {
             time: dateStr,
             elo: Math.round(rating.elo)
         };
     });
 
-    return entries;
-};
+    return formattedRatings;
+}
+
+
+export const getLatestRating = (ratings: Rating[]) => {
+    return ratings.length < 1 ? "1000" : `${Math.round(ratings[ratings.length - 1].elo)}`
+}
+
+export const getUserName = (userStats: UserStats | undefined) => {
+    return (userStats === undefined) ? "" : userStats.username;
+}
+
+export const getFormat = (format: string | undefined) => {
+    return (format === undefined) ? "" : format;
+}
+
+export const getFormats = (userStats: UserStats | undefined) => {
+    return (userStats === undefined) ? [] : Object.keys(userStats.formats).sort((a, b) => {
+        return a.localeCompare(b);
+    });
+}
