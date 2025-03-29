@@ -52,13 +52,17 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form className="space-y-8">
                 <FormField
                     control={form.control}
                     name="format"
                     render={({ field }) => (
                         <FormItem>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={(value) => {
+                                field.onChange(value);
+                                form.handleSubmit(onSubmit)();
+                            }} value={field.value}
+                            >
                                 <FormControl>
                                     <SelectTrigger className="w-full truncate">
                                         <SelectValue placeholder={currentFormat} />
@@ -72,7 +76,6 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
                         </FormItem>
                     )}
                 />
-                <Button type="submit">Submit</Button>
             </form>
         </Form>
     )
