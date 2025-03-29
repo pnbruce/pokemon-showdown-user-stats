@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Button } from "@/components/ui/button"
 import {
     Form,
     FormControl,
@@ -48,8 +47,6 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
         <SelectItem value={format} key={format}>{format}</SelectItem>
     )
 
-    console.log("currentFormat: " + currentFormat);
-
     return (
         <Form {...form}>
             <form className="space-y-8">
@@ -61,7 +58,7 @@ export function FormatForm({ currentFormat, setFormat, formats }: {
                             <Select onValueChange={(value) => {
                                 field.onChange(value);
                                 form.handleSubmit(onSubmit)();
-                            }} value={field.value}
+                            }} value={currentFormat}
                             >
                                 <FormControl>
                                     <SelectTrigger className="w-full truncate">

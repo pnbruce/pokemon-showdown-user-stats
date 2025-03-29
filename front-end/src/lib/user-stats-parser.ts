@@ -50,3 +50,12 @@ export const getFormats = (userStats: UserStats | undefined) => {
         return a.localeCompare(b);
     });
 }
+
+export function toID(text: any): string {
+	if (typeof text !== 'string') {
+		if (text) text = text.id || text.userid || text.roomid || text;
+		if (typeof text === 'number') text = `${text}`;
+		else if (typeof text !== 'string') return '';
+	}
+	return text.toLowerCase().replace(/[^a-z0-9]+/g, '')
+}

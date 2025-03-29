@@ -63,7 +63,7 @@ function App() {
           <div className="App-chart">
             <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             <div className="App-form">
-              <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div> :
@@ -72,7 +72,7 @@ function App() {
               <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             </div>
             <div className="App-form">
-              <UsernameForm setUserStats={setUserStats} setFormat={setFormat}/>
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div>

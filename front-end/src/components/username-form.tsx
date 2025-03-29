@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
     Form,
@@ -19,9 +18,10 @@ const FormSchema = z.object({
     username: z.string()
 })
 
-export function UsernameForm({ setUserStats, setFormat }: {
+export function UsernameForm({ setUserStats, setFormat, currentFormat }: {
     setUserStats: (data: UserStats) => void,
-    setFormat: (format: string | undefined) => void
+    setFormat: (format: string | undefined) => void,
+    currentFormat: string
 }) {
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -32,7 +32,7 @@ export function UsernameForm({ setUserStats, setFormat }: {
 
     async function onSubmit(data: z.infer<typeof FormSchema>) {
         try {
-            updateUserStats(data.username, "gen9randombattle", "gen9randombattle", setUserStats, setFormat);
+            updateUserStats(data.username, currentFormat, "gen9randombattle", setUserStats, setFormat);
         } catch (error) {
             console.error("Error fetching user stats:", error);
         }
@@ -40,7 +40,7 @@ export function UsernameForm({ setUserStats, setFormat }: {
     
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mb-8">
                 <FormField
                     control={form.control}
                     name="username"
@@ -53,7 +53,6 @@ export function UsernameForm({ setUserStats, setFormat }: {
                         </FormItem>
                     )}
                 />
-                <Button type="submit" className="mb-8">Submit</Button>
             </form>
         </Form>
     )
