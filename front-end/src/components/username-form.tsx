@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { set, useForm } from "react-hook-form"
 import { z } from "zod"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,15 +13,17 @@ import {
 } from "@/components/ui/form"
 import { updateUserStats } from "@/lib/defaults"
 import { UserStats } from "@/lib/api"
+import { AxiosError } from "axios"
 
 const FormSchema = z.object({
     username: z.string()
 })
 
-export function UsernameForm({ setUserStats, setFormat, currentFormat }: {
+export function UsernameForm({ setUserStats, setFormat, currentFormat, setAddUserDialog }: {
     setUserStats: (data: UserStats) => void,
     setFormat: (format: string | undefined) => void,
-    currentFormat: string
+    currentFormat: string,
+    setAddUserDialog: (value: boolean) => void,
 }) {
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -32,12 +34,16 @@ export function UsernameForm({ setUserStats, setFormat, currentFormat }: {
 
     async function onSubmit(data: z.infer<typeof FormSchema>) {
         try {
-            updateUserStats(data.username, currentFormat, "gen9randombattle", setUserStats, setFormat);
+            await updateUserStats(data.username, currentFormat, "gen9randombattle", setUserStats, setFormat);
         } catch (error) {
-            console.error("Error fetching user stats:", error);
+            if (error instanceof AxiosError && error.response?.status === 404) {
+                setAddUserDialog(true);
+            } else {
+                console.error("Error fetching user stats:", error);
+            }
         }
     }
-    
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mb-8">

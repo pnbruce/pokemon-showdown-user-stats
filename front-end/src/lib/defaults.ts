@@ -1,4 +1,5 @@
 import { UserStats, Formats, getUserStats } from "@/lib/api";
+import { AxiosError } from "axios";
 
 export const tryGetUsernameFromStorage = (storage: Storage, fallbackDefaultUsername: string) => {
   return getFromStorage(storage, fallbackDefaultUsername, "username");
@@ -20,20 +21,15 @@ const getFromStorage = (storage: Storage, defaultValue: string, key: string) => 
 export async function updateUserStats(username: string, defaultFormat: string, fallbackFormat: string,
   setUserStats: (data: UserStats) => void,
   setFormat: (format: string | undefined) => void) {
-  try {
-    const stats = await getUserStats(username);
-    setUserStats(stats);
-    localStorage.setItem("username", JSON.stringify(username));
-    if (!(Object.keys(stats.formats).length === 0)) {
-      const format = getFormat(stats.formats, defaultFormat, fallbackFormat);
-      setFormat(format);
-      localStorage.setItem("format", JSON.stringify(format));
-    } else {
-      setFormat(undefined);
-    }
-  } catch (error) {
-    console.error("error getting user stats:", error);
-    return;
+  const stats = await getUserStats(username);
+  setUserStats(stats);
+  localStorage.setItem("username", JSON.stringify(username));
+  if (!(Object.keys(stats.formats).length === 0)) {
+    const format = getFormat(stats.formats, defaultFormat, fallbackFormat);
+    setFormat(format);
+    localStorage.setItem("format", JSON.stringify(format));
+  } else {
+    setFormat(undefined);
   }
 }
 

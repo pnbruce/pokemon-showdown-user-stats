@@ -41,6 +41,10 @@
   --chart-5: hsl(27 87% 67%);
   --radius: 0.6rem;
 
+  .alert-dialog-content {
+    background-color: white;
+  }
+
   button {
     border: 1px solid transparent hsl(0, 0%, 0%);
     padding: 0.6em .8em;

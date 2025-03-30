@@ -6,11 +6,13 @@ import { getRatingsForFormat, getLatestRating, getUserName, getFormat, formatRat
 import { tryGetUsernameFromStorage, tryGetFormatFromStorage, updateUserStats } from './lib/defaults'
 import { FormatForm } from './components/format-form'
 import { UsernameForm } from './components/username-form'
+import { AddDialog } from './components/add-user-dialog'
 
 function App() {
   const [useDefault, setUseDefault] = useState(true);
   const [userStats, setUserStats] = useState<UserStats>();
   const [format, setFormat] = useState<string>();
+  const [addUserDialog, setAddUserDialog] = useState(false);
 
   useEffect(() => {
     if (useDefault) {
@@ -55,6 +57,7 @@ function App() {
 
   return (
     <div className="App">
+      <AddDialog addUserDialog={addUserDialog} setAddUserDialog={setAddUserDialog} setUserStats={setUserStats} setFormat={setFormat}/>
       <div className='App-header'>
         <h1 className="text-left text-2xl">Pokémon Showdown User Stats</h1>
       </div>
@@ -63,7 +66,7 @@ function App() {
           <div className="App-chart">
             <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             <div className="App-form">
-              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat}/>
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat} setAddUserDialog={setAddUserDialog}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div> :
@@ -72,7 +75,7 @@ function App() {
               <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
             </div>
             <div className="App-form">
-              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat}/>
+              <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat} setAddUserDialog={setAddUserDialog}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
             </div>
           </div>
