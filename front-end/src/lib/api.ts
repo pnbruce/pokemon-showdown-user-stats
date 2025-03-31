@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { toID } from "./user-stats-parser";
 
 export interface Rating {
@@ -14,6 +14,23 @@ export interface UserStats {
     username: string;
     userid: string;
     formats: Formats;
+}
+
+interface UserProfile {
+    username: string;
+    userid: string;
+    registertime: number;
+    group: number;
+    ratings: {
+        [key: string]: RatingStats;
+    };
+}
+
+interface RatingStats {
+    elo: number;
+    gxe: number;
+    rpr: number;
+    rprd: number;
 }
 
 const API_BASE_URL = "https://pokemonshowdownuserstats.com";
@@ -40,3 +57,14 @@ export const addUser = async (username: string): Promise<UserStats> => {
         throw error;
     }
 };
+
+export const pokemonShowdownGetUser = async (username: string): Promise<UserProfile> => {
+    const id = toID(username);
+    try {
+        const response = await axios.get<UserProfile>(`https://pokemonshowdown.com/users/${id}.json`);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching user stats:", error);
+        throw error;
+    }
+}

@@ -1,5 +1,4 @@
 import { UserStats, Formats, getUserStats } from "@/lib/api";
-import { AxiosError } from "axios";
 
 export const tryGetUsernameFromStorage = (storage: Storage, fallbackDefaultUsername: string) => {
   return getFromStorage(storage, fallbackDefaultUsername, "username");
