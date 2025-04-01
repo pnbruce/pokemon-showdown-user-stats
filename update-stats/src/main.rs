@@ -42,7 +42,7 @@ async fn main() {
                 Ok(resp) => resp,
                 Err(e) => {
                     println!("ERROR: error scanning table: {:?}", e);
-                    thread::sleep(Duration::from_secs(3600));
+                    tokio::time::sleep(Duration::from_secs(3600)).await;
                     continue;
                 }
             };

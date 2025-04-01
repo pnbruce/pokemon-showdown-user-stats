@@ -16,6 +16,10 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from "path";
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 
 export interface InfrastructureStackProps extends cdk.StackProps {
   certificateArn: string; // ARN of the certificate created in CertificateStack
@@ -244,6 +248,45 @@ export class InfrastructureStack extends cdk.Stack {
         }]
       }]
     });
+
+    // 1. Define the Metric to monitor (API Gateway 5xx Errors)
+    const apiGateway5xxMetric = new cloudwatch.Metric({
+      namespace: 'AWS/ApiGateway',
+      metricName: '5XXError', // Standard metric name for 5xx errors in API Gateway V2
+      dimensionsMap: {
+        ApiId: userStatsApi.apiId,  // Get ApiId dynamically from the HttpApi construct
+        Stage: userStatsApiStage.stageName, // Get Stage name dynamically from the HttpStage construct
+      },
+      statistic: 'Sum',       // Use Sum as requested
+      period: cdk.Duration.minutes(1), // Use 60 seconds (1 minute) period as requested
+    });
+
+    // 2. Create an SNS Topic for notifications (reuse or create new if needed)
+    //    If you want a separate topic for this alarm, change the ID and name.
+    //    Otherwise, reusing the same topic is fine.
+    const alarmTopic = new sns.Topic(this, 'ApiGatewayAlarmTopic', {
+      displayName: 'API Gateway 5xx Error Alarm Topic',
+    });
+
+    // 3. Add an Email subscription to the topic
+    //    !! IMPORTANT !! Replace with your actual email address.
+    //    You MUST confirm the subscription via the email AWS sends.
+    const emailAddress = 'patricknbruce@gmail.com'; // REPLACE THIS
+    alarmTopic.addSubscription(new subscriptions.EmailSubscription(emailAddress));
+
+    // 4. Create the CloudWatch Alarm for API Gateway 5xx Errors
+    const apiGateway5xxAlarm = new cloudwatch.Alarm(this, 'ApiGateway5xxAlarm', {
+      alarmName: `ApiGateway-${userStatsApi.apiId}-${userStatsApiStage.stageName}-5xxErrors-High`, // Descriptive name
+      alarmDescription: `Alarm triggers if API Gateway ${userStatsApi.apiId} Stage ${userStatsApiStage.stageName} 5xx errors exceed 1 in a 1-minute period.`,
+      metric: apiGateway5xxMetric,
+      threshold: 1, // The value the metric must exceed to trigger the alarm
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD, // Trigger if Metric > Threshold
+      evaluationPeriods: 1, // How many consecutive periods the threshold must be breached
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING, // Treat missing data as OK (not alarming)
+    });
+
+    // 5. Add an action to notify the SNS topic when the alarm state is reached
+    apiGateway5xxAlarm.addAlarmAction(new actions.SnsAction(alarmTopic));
 
     new cdk.CfnOutput(this, 'UserStatsApiUrl', {
       value: userStatsApi.apiEndpoint,
