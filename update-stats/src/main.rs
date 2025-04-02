@@ -8,7 +8,6 @@ use serde_json::Value;
 use std::env;
 use std::io::Read;
 use std::io::Write;
-use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
@@ -18,6 +17,7 @@ async fn main() {
     let user_stats_table_env = "USER_STATS_TABLE";
     let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let ddb = dynamodb::Client::new(&config);
+    let cloud_watch = aws_sdk_cloudwatch::Client::new(&config);
     let user_stats_table = match env::var(user_stats_table_env) {
         Ok(val) => val,
         Err(_) => {
@@ -255,6 +255,23 @@ async fn main() {
         };
         println!("scan time: {} milis", time_passed.as_millis());
         println!("Scan table once per min. Waiting for {} milis...", wait_time.as_millis());
+        match cloud_watch
+            .put_metric_data()
+            .namespace("UpdateStats")
+            .metric_data(
+            aws_sdk_cloudwatch::types::MetricDatum::builder()
+                .metric_name("wait_time")
+                .value(wait_time.as_millis() as f64)
+                .unit(aws_sdk_cloudwatch::types::StandardUnit::Milliseconds) 
+                .build(),
+            )
+            .send()
+            .await {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error writing to CloudWatch: {:?}", e);
+            }
+        };
         tokio::time::sleep(wait_time).await;
     }
 }

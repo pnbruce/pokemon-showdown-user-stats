@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 aws-config = "1.5.15"
+aws-sdk-cloudwatch = "1.70.0"
 aws-sdk-dynamodb = "1.63.0"
 flate2 = "1.0"
 pokemon-showdown-user-stats-model = "0.1.0"

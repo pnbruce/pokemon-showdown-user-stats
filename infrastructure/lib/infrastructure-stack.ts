@@ -8,6 +8,7 @@ import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as route53 from 'aws-cdk-lib/aws-route53';
@@ -109,6 +110,11 @@ export class InfrastructureStack extends cdk.Stack {
         operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
       },
     });
+
+    updateStatsTaskDefinition.taskRole.addToPrincipalPolicy(new iam.PolicyStatement({
+      actions: ['cloudwatch:PutMetricData'],
+      resources: ['*'], 
+    }));
 
     const updateStatsContainer = updateStatsTaskDefinition.addContainer('UpdateStatsContainer', {
       image: updateStatsDockerImage,
@@ -249,44 +255,59 @@ export class InfrastructureStack extends cdk.Stack {
       }]
     });
 
-    // 1. Define the Metric to monitor (API Gateway 5xx Errors)
+    // Existing API Gateway 5xx Alarm
     const apiGateway5xxMetric = new cloudwatch.Metric({
       namespace: 'AWS/ApiGateway',
-      metricName: '5XXError', // Standard metric name for 5xx errors in API Gateway V2
+      metricName: '5XXError',
       dimensionsMap: {
-        ApiId: userStatsApi.apiId,  // Get ApiId dynamically from the HttpApi construct
-        Stage: userStatsApiStage.stageName, // Get Stage name dynamically from the HttpStage construct
+        ApiId: userStatsApi.apiId,
+        Stage: userStatsApiStage.stageName,
       },
-      statistic: 'Sum',       // Use Sum as requested
-      period: cdk.Duration.minutes(1), // Use 60 seconds (1 minute) period as requested
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(1),
     });
 
-    // 2. Create an SNS Topic for notifications (reuse or create new if needed)
-    //    If you want a separate topic for this alarm, change the ID and name.
-    //    Otherwise, reusing the same topic is fine.
     const alarmTopic = new sns.Topic(this, 'ApiGatewayAlarmTopic', {
       displayName: 'API Gateway 5xx Error Alarm Topic',
     });
 
-    // 3. Add an Email subscription to the topic
-    //    !! IMPORTANT !! Replace with your actual email address.
-    //    You MUST confirm the subscription via the email AWS sends.
-    const emailAddress = 'patricknbruce@gmail.com'; // REPLACE THIS
+    const emailAddress = 'patricknbruce@gmail.com'; // Already in your code
     alarmTopic.addSubscription(new subscriptions.EmailSubscription(emailAddress));
 
-    // 4. Create the CloudWatch Alarm for API Gateway 5xx Errors
     const apiGateway5xxAlarm = new cloudwatch.Alarm(this, 'ApiGateway5xxAlarm', {
-      alarmName: `ApiGateway-${userStatsApi.apiId}-${userStatsApiStage.stageName}-5xxErrors-High`, // Descriptive name
+      alarmName: `ApiGateway-${userStatsApi.apiId}-${userStatsApiStage.stageName}-5xxErrors-High`,
       alarmDescription: `Alarm triggers if API Gateway ${userStatsApi.apiId} Stage ${userStatsApiStage.stageName} 5xx errors exceed 1 in a 1-minute period.`,
       metric: apiGateway5xxMetric,
-      threshold: 1, // The value the metric must exceed to trigger the alarm
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD, // Trigger if Metric > Threshold
-      evaluationPeriods: 1, // How many consecutive periods the threshold must be breached
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING, // Treat missing data as OK (not alarming)
+      threshold: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // 5. Add an action to notify the SNS topic when the alarm state is reached
     apiGateway5xxAlarm.addAlarmAction(new actions.SnsAction(alarmTopic));
+
+    // New WaitTime Alarm for the ECS Container Metric
+    const waitTimeMetric = new cloudwatch.Metric({
+      namespace: 'UpdateStats', // Matches your Rust code
+      metricName: 'wait_time',  // Matches your Rust code
+      unit: cloudwatch.Unit.MILLISECONDS, // Matches your Rust code
+      statistic: 'Average',     // Aggregates over the period; adjust if needed
+      period: cdk.Duration.minutes(5), // 5-minute evaluation period
+    });
+
+    const waitTimeAlarm = new cloudwatch.Alarm(this, 'WaitTimeAlarm', {
+      alarmName: `UpdateStats-WaitTime-ZeroOrMissing`,
+      alarmDescription: 'Alarm triggers if wait_time is 0 or no data is reported from the UpdateStats ECS service.',
+      metric: waitTimeMetric,
+      threshold: 0, // Trigger if <= 0
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      evaluationPeriods: 1, // Check once over the period
+      datapointsToAlarm: 1, // Alarm after 1 breach
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING, // Alarm if no data
+    });
+
+    // Reuse the existing SNS topic for notifications
+    waitTimeAlarm.addAlarmAction(new actions.SnsAction(alarmTopic));
 
     new cdk.CfnOutput(this, 'UserStatsApiUrl', {
       value: userStatsApi.apiEndpoint,
