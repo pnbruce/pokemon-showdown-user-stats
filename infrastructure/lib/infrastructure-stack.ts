@@ -291,7 +291,7 @@ export class InfrastructureStack extends cdk.Stack {
       namespace: 'UpdateStats', // Matches your Rust code
       metricName: 'wait_time',  // Matches your Rust code
       unit: cloudwatch.Unit.MILLISECONDS, // Matches your Rust code
-      statistic: 'Average',     // Aggregates over the period; adjust if needed
+      statistic: 'Minimum',     // Aggregates over the period; adjust if needed
       period: cdk.Duration.minutes(5), // 5-minute evaluation period
     });
 

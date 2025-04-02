@@ -29,6 +29,7 @@ async fn main() {
     loop {
         let mut exclusive_start_key = None;
         let scan_start_time = Instant::now();
+        let mut item_count = 0;
         loop {
             let scan_page_start_time = Instant::now();
             let user_stats_table_scan_resp = match ddb
@@ -49,6 +50,7 @@ async fn main() {
 
             if let Some(items) = user_stats_table_scan_resp.items {
                 for item in items {
+                    item_count += 1;
                     let user_id = match item.get("userId") {
                         Some(val) => val,
                         None => {
@@ -255,14 +257,32 @@ async fn main() {
         };
         println!("scan time: {} milis", time_passed.as_millis());
         println!("Scan table once per min. Waiting for {} milis...", wait_time.as_millis());
+        let name_space = "UpdateStats";
         match cloud_watch
             .put_metric_data()
-            .namespace("UpdateStats")
+            .namespace(name_space)
             .metric_data(
             aws_sdk_cloudwatch::types::MetricDatum::builder()
                 .metric_name("wait_time")
                 .value(wait_time.as_millis() as f64)
                 .unit(aws_sdk_cloudwatch::types::StandardUnit::Milliseconds) 
+                .build(),
+            )
+            .send()
+            .await {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error writing to CloudWatch: {:?}", e);
+            }
+        };
+        match cloud_watch
+            .put_metric_data()
+            .namespace(name_space)
+            .metric_data(
+            aws_sdk_cloudwatch::types::MetricDatum::builder()
+                .metric_name("item_count")
+                .value(item_count as f64)
+                .unit(aws_sdk_cloudwatch::types::StandardUnit::Count) 
                 .build(),
             )
             .send()
