@@ -6,7 +6,7 @@ build-and-deploy:
 	cd ./front-end && npm run build
 	cd ./infrastructure && cdk synth && cdk deploy --all
 
-watch: 
+watch: hello
 	cd ./add-user-lambda && cargo lambda watch
 
 build:
