@@ -13,8 +13,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Button } from "./button"
-// import { Button } from "./button"
+import { TimeRangeButton } from "../time-range-button"
 
 
 const chartConfig = {
@@ -75,14 +74,15 @@ export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile
                             stroke="var(--chart-1)"
                             strokeWidth={2}
                             dot={false}
+                            isAnimationActive={false}
                         />
                     </LineChart>
                 </ChartContainer>
-                <Button className={timeRange == Range.Day ? "text-[hsl(12_76%_61%)]" : ""} type="button">1D</Button>
-                <Button className={timeRange == Range.Week ? "text-[hsl(12_76%_61%)]" : ""} type="button">1W</Button>
-                <Button className={timeRange == Range.Month ? "text-[hsl(12_76%_61%)]" : ""} type="button">1M</Button>
-                <Button className={timeRange == Range.Year ? "text-[hsl(12_76%_61%)]" : ""} type="button">1Y</Button>
-                <Button className={timeRange == Range.All ? "text-[hsl(12_76%_61%)]" : ""} type="button">All Time</Button>
+                <TimeRangeButton timeRange={Range.Day} currentRange={timeRange} setTimeRange={setTimeRange}></TimeRangeButton>
+                <TimeRangeButton timeRange={Range.Week} currentRange={timeRange} setTimeRange={setTimeRange}></TimeRangeButton>
+                <TimeRangeButton timeRange={Range.Month} currentRange={timeRange} setTimeRange={setTimeRange}></TimeRangeButton>
+                <TimeRangeButton timeRange={Range.Year} currentRange={timeRange} setTimeRange={setTimeRange}></TimeRangeButton>
+                <TimeRangeButton timeRange={Range.All} currentRange={timeRange} setTimeRange={setTimeRange}></TimeRangeButton>
             </CardContent>
         </Card>
     )

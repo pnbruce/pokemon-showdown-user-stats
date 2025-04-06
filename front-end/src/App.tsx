@@ -8,7 +8,7 @@ import { FormatForm } from './components/format-form'
 import { UsernameForm } from './components/username-form'
 import { AddDialog } from './components/add-user-dialog'
 import { NotRegisteredDialog } from './components/user-not-registered-dialog'
-import { Range } from './lib/time-range'
+import { Range, applyTimeRange } from './lib/time-range'
 
 function App() {
   const [useDefault, setUseDefault] = useState(true);
@@ -51,7 +51,11 @@ function App() {
   const username = getUserName(userStats);
   const currentFormat = getFormat(format);
   const ratings = getRatingsForFormat(userStats, format);
-  const formattedRatings = formatRatings(ratings);
+  console.log("Ratings: ", ratings);
+  console.log("timeRange: ", timeRange);
+  console.log("now: ", Date.now());
+  const filteredRatings = applyTimeRange(ratings, timeRange, Math.floor(Date.now() / 1000));
+  const formattedRatings = formatRatings(filteredRatings);
   const formats = getFormats(userStats);
   const lastRating = getLatestRating(ratings);
 
