@@ -8,6 +8,7 @@ import { FormatForm } from './components/format-form'
 import { UsernameForm } from './components/username-form'
 import { AddDialog } from './components/add-user-dialog'
 import { NotRegisteredDialog } from './components/user-not-registered-dialog'
+import { Range } from './lib/time-range'
 
 function App() {
   const [useDefault, setUseDefault] = useState(true);
@@ -16,6 +17,7 @@ function App() {
   const [addUserDialog, setAddUserDialog] = useState(false);
   const [notRegisteredDialog, setNotRegisteredDialog] = useState(false);
   const [enteredUsername, setEnteredUsername] = useState<string>("");
+  const [timeRange, setTimeRange] = useState<Range>(Range.All);
 
   useEffect(() => {
     if (useDefault) {
@@ -68,7 +70,7 @@ function App() {
       {
         (isMobile) ?
           <div className="App-chart">
-            <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
+            <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} timeRange={timeRange} setTimeRange={setTimeRange}/>
             <div className="App-form">
               <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat} setAddUserDialog={setAddUserDialog}  setEnteredUsername={setEnteredUsername} setNotRegisteredDialog={setNotRegisteredDialog}/>
               <FormatForm currentFormat={currentFormat} setFormat={setFormat} formats={formats} />
@@ -76,7 +78,7 @@ function App() {
           </div> :
           <div style={{ display: "grid", gridTemplateColumns: "4fr 1fr", gap: "10px" }}>
             <div className="App-chart">
-              <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} />
+              <MultiLineChart username={username} ratings={formattedRatings} format={currentFormat} lastRating={lastRating} isMobile={isMobile} timeRange={timeRange} setTimeRange={setTimeRange}/>
             </div>
             <div className="App-form">
               <UsernameForm setUserStats={setUserStats} setFormat={setFormat} currentFormat={currentFormat} setAddUserDialog={setAddUserDialog}  setEnteredUsername={setEnteredUsername} setNotRegisteredDialog={setNotRegisteredDialog}/>

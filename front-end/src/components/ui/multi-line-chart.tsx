@@ -1,4 +1,5 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { Range } from '../../lib/time-range'
 
 import {
     Card,
@@ -12,13 +13,14 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart"
+import { Button } from "./button"
 // import { Button } from "./button"
 
 
 const chartConfig = {
 } satisfies ChartConfig
 
-export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile }: {
+export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile, timeRange, setTimeRange }: {
     username: string
     ratings: {
         time: string;
@@ -27,6 +29,8 @@ export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile
     format: string
     lastRating: string
     isMobile: boolean
+    timeRange: Range
+    setTimeRange: (value: Range) => void
 }) => {
 
     // TODO:
@@ -74,11 +78,11 @@ export const MultiLineChart = ({ username, ratings, format, lastRating, isMobile
                         />
                     </LineChart>
                 </ChartContainer>
-                {/* <Button type="button">1D</Button>
-                <Button type="button">1W</Button>
-                <Button type="button">1M</Button>
-                <Button type="button">1Y</Button>
-                <Button type="button">All Time</Button> */}
+                <Button className={timeRange == Range.Day ? "text-[hsl(12_76%_61%)]" : ""} type="button">1D</Button>
+                <Button className={timeRange == Range.Week ? "text-[hsl(12_76%_61%)]" : ""} type="button">1W</Button>
+                <Button className={timeRange == Range.Month ? "text-[hsl(12_76%_61%)]" : ""} type="button">1M</Button>
+                <Button className={timeRange == Range.Year ? "text-[hsl(12_76%_61%)]" : ""} type="button">1Y</Button>
+                <Button className={timeRange == Range.All ? "text-[hsl(12_76%_61%)]" : ""} type="button">All Time</Button>
             </CardContent>
         </Card>
     )
