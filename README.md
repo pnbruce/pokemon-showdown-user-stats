@@ -1,7 +1,9 @@
 # Pokemon Showdown User Stats
 
 The goal of this project is to track publicly available user stats on showdown. Particularly,
-tracking elo over time.
+tracking elo over time. 
+
+https://pokemonshowdownuserstats.com/
 
 ## Development
 
@@ -16,6 +18,18 @@ make build-and-deploy
 
 However, if others want to contribute, I can set up a pipeline that automatically deploys code
 committed to the repo.
+
+## API
+
+Request all datapoints for a user by making a get request to the following. Replace the_brucey with the username.
+```
+https://pokemonshowdownuserstats.com/user-stats/the_brucey
+```
+
+Start tracking stats for a user by making a put request to the following. Replace the_brucey with the username.
+```
+https://pokemonshowdownuserstats.com/user-stats/the_brucey
+```
 
 ## Issues
 
